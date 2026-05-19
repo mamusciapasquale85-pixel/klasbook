@@ -244,3 +244,226 @@ export async function sendSubscriptionConfirmationEmail(params: {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
+
+// ─── Email d'initiation essai 14 jours ──────────────────────────────────
+
+export async function sendTrialInitiationEmail(params: {
+  to: string;
+  firstName: string;
+  plan: "pro" | "ecole";
+  trialEndsAt: string;
+}): Promise<SendResult> {
+  try {
+    const resend = getResend();
+    const { to, firstName, plan, trialEndsAt } = params;
+
+    const planLabel = plan === "pro" ? "Pro Professeur" : "École";
+
+    const html = baseLayout(`
+      <div style="background:linear-gradient(135deg,#FF3B30 0%,#0A84FF 100%);padding:28px 32px">
+        <div style="font-size:20px;font-weight:900;color:#fff">Essai gratuit activé 🎁</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">
+          Plan ${planLabel} · 14 jours gratuits
+        </div>
+      </div>
+      <div style="padding:28px 32px">
+        <p style="font-size:15px;color:#0f172a;margin:0 0 16px">Bonjour ${firstName},</p>
+        <p style="font-size:14px;color:#475569;line-height:1.7;margin:0 0 20px">
+          Ton essai gratuit <strong>Klasbook ${planLabel}</strong> est activé.
+          Tu as accès à toutes les fonctionnalités premium sans aucun frais jusqu'à la fin de la période d'essai.
+        </p>
+        <div style="background:#fef3c7;border-radius:10px;border:1px solid #fcd34d;
+                    padding:16px 20px;margin:0 0 24px">
+          <div style="font-weight:800;color:#92400e;font-size:14px;margin-bottom:8px">
+            ⏰ Essai jusqu'au ${trialEndsAt}
+          </div>
+          <p style="font-size:13px;color:#78350f;margin:0;line-height:1.6">
+            À la fin de la période d'essai, ton abonnement sera activé automatiquement.
+            Aucune charge avant cette date. Tu peux annuler à tout moment.
+          </p>
+        </div>
+        <p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 24px">
+          Profite de cette période pour explorer toutes les fonctionnalités :
+          génération d'exercices IA, bulletins FWB, évaluations, portail parents, et bien plus.
+        </p>
+        <div style="text-align:center;margin:24px 0">
+          <a href="https://klasbook.be/dashboard"
+             style="display:inline-block;padding:13px 32px;border-radius:12px;
+                    background:linear-gradient(135deg,#FF3B30 0%,#0A84FF 100%);
+                    color:#fff;font-weight:800;font-size:14px;text-decoration:none">
+            Accéder à mon tableau de bord →
+          </a>
+        </div>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+        <p style="font-size:12px;color:#94a3b8;margin:0">
+          Une question ? Réponds directement à cet email ou écris à
+          <a href="mailto:support@klasbook.be" style="color:#0A84FF">support@klasbook.be</a>
+        </p>
+      </div>
+    `);
+
+    await resend.emails.send({
+      from: FROM,
+      to,
+      subject: `Essai gratuit Klasbook ${planLabel} activé 🎁`,
+      html,
+    });
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+// ─── Email d'avertissement expiration essai (GDPR Art. 21) ───────────────
+
+export async function sendTrialExpirationWarningEmail(params: {
+  to: string;
+  firstName: string;
+  plan: "pro" | "ecole";
+  chargeDate: string;
+  amount: number;
+}): Promise<SendResult> {
+  try {
+    const resend = getResend();
+    const { to, firstName, plan, chargeDate, amount } = params;
+
+    const planLabel = plan === "pro" ? "Pro Professeur" : "École";
+
+    const html = baseLayout(`
+      <div style="background:linear-gradient(135deg,#FF3B30 0%,#0A84FF 100%);padding:28px 32px">
+        <div style="font-size:20px;font-weight:900;color:#fff">Essai se termine bientôt ⏰</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">
+          Ton abonnement sera activé dans 48 heures
+        </div>
+      </div>
+      <div style="padding:28px 32px">
+        <p style="font-size:15px;color:#0f172a;margin:0 0 16px">Bonjour ${firstName},</p>
+        <p style="font-size:14px;color:#475569;line-height:1.7;margin:0 0 20px">
+          Ton essai gratuit Klasbook ${planLabel} se termine dans les <strong>48 prochaines heures</strong>.
+          Ton abonnement payant sera automatiquement activé sauf si tu l'annules.
+        </p>
+        <div style="background:#fee2e2;border-radius:10px;border:1px solid #fecaca;
+                    padding:16px 20px;margin:0 0 24px">
+          <div style="font-weight:800;color:#991b1b;font-size:14px;margin-bottom:8px">
+            💳 Charge prévue le ${chargeDate}
+          </div>
+          <p style="font-size:13px;color:#7f1d1d;margin:0;line-height:1.6">
+            Montant : <strong>€${amount.toFixed(2)}</strong>
+          </p>
+        </div>
+        <p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 24px">
+          Tu as le droit d'annuler cet abonnement à tout moment jusqu'à la date de facturation.
+          Aucune charge supplémentaire ne sera appliquée après l'annulation.
+        </p>
+        <div style="text-align:center;margin:24px 0">
+          <a href="https://klasbook.be/profil"
+             style="display:inline-block;padding:13px 32px;border-radius:12px;
+                    background:linear-gradient(135deg,#FF3B30 0%,#0A84FF 100%);
+                    color:#fff;font-weight:800;font-size:14px;text-decoration:none">
+            Gérer mon abonnement →
+          </a>
+        </div>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+        <p style="font-size:11px;color:#94a3b8;margin:0">
+          <strong>GDPR Art. 21 — Droit de rétractation :</strong>
+          Tu peux annuler cet abonnement à tout moment. Aucune charge supplémentaire ne sera appliquée après l'annulation.
+          <br><a href="mailto:support@klasbook.be" style="color:#0A84FF">Contacte le support</a> pour plus d'aide.
+        </p>
+      </div>
+    `);
+
+    await resend.emails.send({
+      from: FROM,
+      to,
+      subject: `⚠️ Ton essai Klasbook se termine dans 48 heures`,
+      html,
+    });
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+// ─── Email de confirmation d'annulation ──────────────────────────────────
+
+export async function sendCancellationConfirmationEmail(params: {
+  to: string;
+  firstName: string;
+  plan: "pro" | "ecole";
+  accessUntil: string;
+  surveyUrl?: string;
+}): Promise<SendResult> {
+  try {
+    const resend = getResend();
+    const { to, firstName, plan, accessUntil, surveyUrl } = params;
+
+    const planLabel = plan === "pro" ? "Pro Professeur" : "École";
+
+    const html = baseLayout(`
+      <div style="background:linear-gradient(135deg,#FF3B30 0%,#0A84FF 100%);padding:28px 32px">
+        <div style="font-size:20px;font-weight:900;color:#fff">Abonnement annulé ✓</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">
+          Tu as accès jusqu'au ${accessUntil}
+        </div>
+      </div>
+      <div style="padding:28px 32px">
+        <p style="font-size:15px;color:#0f172a;margin:0 0 16px">Bonjour ${firstName},</p>
+        <p style="font-size:14px;color:#475569;line-height:1.7;margin:0 0 20px">
+          Ton abonnement Klasbook ${planLabel} a été annulé. Tu conserves l'accès à toutes les fonctionnalités
+          jusqu'au <strong>${accessUntil}</strong>, puis tu repasseras au plan gratuit.
+        </p>
+        <div style="background:#dcfce7;border-radius:10px;border:1px solid #86efac;
+                    padding:16px 20px;margin:0 0 24px">
+          <div style="font-weight:800;color:#166534;font-size:14px;margin-bottom:8px">
+            ✓ Confirmation de l'annulation
+          </div>
+          <p style="font-size:13px;color:#166534;margin:0;line-height:1.6">
+            Ton abonnement ne sera pas renouvelé. Aucune charge supplémentaire ne sera appliquée.
+          </p>
+        </div>
+        <div style="background:#fef3c7;border-radius:10px;border:1px solid #fcd34d;
+                    padding:16px 20px;margin:0 0 24px">
+          <div style="font-weight:800;color:#92400e;font-size:14px;margin-bottom:8px">
+            🎁 Nous aimerions te garder !
+          </div>
+          <p style="font-size:13px;color:#78350f;margin:0 0 12px;line-height:1.6">
+            Utilise le code <strong>REVENEZ20</strong> pour obtenir <strong>-20% de réduction</strong>
+            si tu décides de réabonner dans les 30 prochains jours.
+          </p>
+          <a href="https://klasbook.be/pricing"
+             style="display:inline-block;padding:8px 16px;border-radius:8px;
+                    background:#fcd34d;color:#92400e;font-weight:700;font-size:12px;
+                    text-decoration:none;margin-top:8px">
+            Réabonner avec -20% →
+          </a>
+        </div>
+        ${surveyUrl ? `
+        <p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 24px">
+          Ton avis nous aide à améliorer Klasbook.
+          <a href="${surveyUrl}" style="color:#0A84FF">Partage ton retour en 2 minutes</a>.
+        </p>
+        ` : ''}
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+        <p style="font-size:11px;color:#94a3b8;margin:0">
+          <strong>GDPR Art. 17 — Droit à l'oubli :</strong>
+          Si tu souhaites supprimer complètement ton compte et toutes tes données,
+          écris à <a href="mailto:support@klasbook.be?subject=Suppression%20de%20compte" style="color:#0A84FF">support@klasbook.be</a>
+          avec le sujet "Suppression de compte".
+        </p>
+      </div>
+    `);
+
+    await resend.emails.send({
+      from: FROM,
+      to,
+      subject: "Ton abonnement Klasbook a été annulé",
+      html,
+    });
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}

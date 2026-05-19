@@ -127,7 +127,7 @@ export async function GET(req: Request) {
           to: userData.email,
           firstName: userData.firstName,
           plan,
-          chargeAmount,
+          amount: chargeAmount,
           chargeDate,
         });
 
