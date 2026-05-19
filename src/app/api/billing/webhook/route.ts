@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { sendTrialInitiationEmail, sendTrialExpirationWarningEmail, sendCancellationConfirmationEmail } from "@/lib/emails";
 
 // ─── Webhook Stripe ─────────────────────────────────────────────────────────
 // Variable d'environnement requise : STRIPE_WEBHOOK_SECRET=whsec_...
@@ -23,6 +24,29 @@ function getSupabaseAdmin() {
 
 function planFromMetadata(subscription: Stripe.Subscription): string {
   return (subscription.metadata?.plan as string) ?? "pro";
+}
+
+async function getUserData(userId: string): Promise<{ email: string; firstName: string } | null> {
+  const supabase = getSupabaseAdmin();
+
+  // email → auth.users (user_profiles n'a pas de colonne email)
+  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
+  if (authError || !authUser?.user?.email) {
+    console.error(`[getUserData] Auth user ${userId} introuvable:`, authError);
+    return null;
+  }
+
+  // prénom → user_profiles.full_name (première partie avant l'espace)
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("full_name")
+    .eq("id", userId)
+    .single();
+
+  const fullName = (profile as { full_name?: string } | null)?.full_name ?? "";
+  const firstName = fullName.split(" ")[0] || "Utilisateur";
+
+  return { email: authUser.user.email, firstName };
 }
 
 export async function POST(req: Request) {
@@ -76,6 +100,22 @@ export async function POST(req: Request) {
           .eq("id", userId);
 
         console.log(`[Stripe] Abonnement activé : user=${userId} plan=${plan}`);
+
+        // Get user data and send trial initiation email
+        const userData = await getUserData(userId);
+        if (userData) {
+          try {
+            await sendTrialInitiationEmail({
+              to: userData.email,
+              firstName: userData.firstName,
+              plan,
+              trialEndsAt: expiresAt,
+            });
+            console.log(`[Stripe] Email initiation essai envoyé : user=${userId}`);
+          } catch (emailError) {
+            console.error(`[Stripe] Erreur envoi email initiation : user=${userId}`, emailError);
+          }
+        }
         break;
       }
 
@@ -113,6 +153,27 @@ export async function POST(req: Request) {
           .eq("id", userId);
 
         console.log(`[Stripe] Abonnement résilié : user=${userId}`);
+
+        // Capture plan and access end date before setting to free
+        const cancelledPlan = planFromMetadata(subscription);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const accessUntil = new Date((subscription as any).current_period_end * 1000).toISOString();
+
+        // Get user data and send cancellation email
+        const userData = await getUserData(userId);
+        if (userData) {
+          try {
+            await sendCancellationConfirmationEmail({
+              to: userData.email,
+              firstName: userData.firstName,
+              plan: cancelledPlan,
+              accessUntil,
+            });
+            console.log(`[Stripe] Email confirmation annulation envoyé : user=${userId}`);
+          } catch (emailError) {
+            console.error(`[Stripe] Erreur envoi email annulation : user=${userId}`, emailError);
+          }
+        }
         break;
       }
 

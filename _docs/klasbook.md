@@ -313,6 +313,11 @@ Purpose : Idempotence flag (duplicate email prevention)
 - Fix affichage message d'erreur Azure (pas générique 500)
 - Reorganisation : repo renommé `cote-platform` → `klasbook`, dossier local → `claude/projets/klasbook`
 
+### 19 mai 2026 — Fix flow paiement Stripe
+- Bug : `getUserData()` dans webhook cherchait `email`/`first_name` sur `user_profiles` (colonnes inexistantes)
+- Fix : email via `auth.admin.getUserById()`, prénom via `full_name.split(" ")[0]`
+- Fix : `trial_period_days` aligné sur 14 jours (idem page pricing)
+
 ### 19 mai 2026 — Fix reset password
 - Bug : lien email reset redirigait vers la page de connexion
 - Cause : `resetPasswordForEmail` pointait vers `/reset-password` directement (flow PKCE non géré)

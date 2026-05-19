@@ -86,7 +86,7 @@ export async function POST(req: Request) {
           supabase_user_id: user.id,
           plan,
         },
-        trial_period_days: 30, // 30 jours d'essai gratuit
+        trial_period_days: 14, // 14 jours d'essai gratuit (affiché sur la page pricing)
       },
       allow_promotion_codes: true,
     });
