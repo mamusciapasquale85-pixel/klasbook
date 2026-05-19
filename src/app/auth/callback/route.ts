@@ -5,6 +5,7 @@ import { createServerClient } from "@supabase/ssr";
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+  const next = requestUrl.searchParams.get("next");
   const origin = requestUrl.origin;
 
   if (!code) return NextResponse.redirect(`${origin}/login`);
@@ -27,6 +28,9 @@ export async function GET(request: NextRequest) {
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) return NextResponse.redirect(`${origin}/login?error=callback`);
+
+  // Redirect explicite (ex: reset password)
+  if (next) return NextResponse.redirect(`${origin}${next}`);
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.redirect(`${origin}/login`);

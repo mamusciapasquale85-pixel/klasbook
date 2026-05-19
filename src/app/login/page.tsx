@@ -96,7 +96,7 @@ export default function LoginPage() {
   async function handleForgot(e: React.FormEvent) {
     e.preventDefault();
     setLoginLoading(true);
-    await supabase.auth.resetPasswordForEmail(loginEmail, { redirectTo: `${window.location.origin}/reset-password` });
+    await supabase.auth.resetPasswordForEmail(loginEmail, { redirectTo: `${window.location.origin}/auth/callback?next=/reset-password` });
     setLoginLoading(false);
     setLoginMsg("✅ Email envoyé ! Vérifiez votre boîte mail.");
   }
