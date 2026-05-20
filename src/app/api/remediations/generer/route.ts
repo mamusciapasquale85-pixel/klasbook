@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { checkAndIncrementRemediationUsage } from "@/lib/billing";
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 
@@ -240,6 +242,24 @@ Consigne en français. 10 SITUATIONS courtes décrites en français : l'élève 
 
 export async function POST(req: NextRequest) {
   try {
+    const authClient = await createSupabaseServerClient();
+    const { data: { user }, error: userErr } = await authClient.auth.getUser();
+    if (userErr || !user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+
+    const quota = await checkAndIncrementRemediationUsage(authClient, user.id);
+    if (!quota.allowed) {
+      return NextResponse.json(
+        {
+          error: `Limite atteinte : tu as utilisé ${quota.used}/${quota.limit} remediations ce mois-ci.`,
+          quota_exceeded: true,
+          upgrade_url: "/pricing",
+        },
+        { status: 429 }
+      );
+    }
+
     const { competence: rawCompetence, theme, niveau, eleveNom, eleve_nom, remediationId } = await req.json();
 
     if (!remediationId) {

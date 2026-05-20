@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { CONTEXTE_SYSTEME_FWB } from "@/lib/referentiels-fwb";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { checkAndIncrementCorrectionUsage } from "@/lib/billing";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -36,6 +38,24 @@ function extractText(payload: unknown): string {
 
 export async function POST(req: Request) {
   try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+
+    const quota = await checkAndIncrementCorrectionUsage(supabase, user.id);
+    if (!quota.allowed) {
+      return NextResponse.json(
+        {
+          error: `Limite atteinte : tu as utilisé ${quota.used}/${quota.limit} corrections ce mois-ci.`,
+          quota_exceeded: true,
+          upgrade_url: "/pricing",
+        },
+        { status: 429 }
+      );
+    }
+
     const body = (await req.json()) as CorrectionRequest;
 
     if (!body.exercice_contenu?.trim()) {
