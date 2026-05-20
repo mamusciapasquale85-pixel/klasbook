@@ -3,12 +3,16 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const FREE_PLAN_MONTHLY_LIMIT = 10; // exercices/mois en plan gratuit
+export const FREE_PLAN_MONTHLY_LIMIT = 10;       // exercices/mois en plan gratuit
+export const FREE_PLAN_MONTHLY_CORRECTIONS = 20; // corrections/mois en plan gratuit
+export const FREE_PLAN_MONTHLY_REMEDIATIONS = 5; // remediations/mois en plan gratuit
 
 type UserPlan = {
   plan: string;
   plan_expires_at: string | null;
 };
+
+type UsageColumn = "nb_exercices" | "nb_corrections" | "nb_remediations";
 
 /**
  * Retourne le plan actif de l'utilisateur.
@@ -36,45 +40,59 @@ export async function getUserPlan(
   return plan ?? "free";
 }
 
-/**
- * Incrémente le compteur mensuel d'exercices.
- * Retourne { allowed: true } si dans les limites, { allowed: false, used, limit } sinon.
- */
-export async function checkAndIncrementExerciceUsage(
+async function checkAndIncrement(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  column: UsageColumn,
+  limit: number
 ): Promise<{ allowed: boolean; used?: number; limit?: number }> {
-
   const plan = await getUserPlan(supabase, userId);
-
-  // Plans payants ou collègues : pas de limite
   if (plan !== "free") return { allowed: true };
 
-  const mois = new Date().toISOString().slice(0, 7); // "2026-03"
+  const mois = new Date().toISOString().slice(0, 7);
 
-  // Lire le compteur actuel
   const { data: usage } = await supabase
     .from("usage_mensuel")
-    .select("nb_exercices")
+    .select(column)
     .eq("user_id", userId)
     .eq("mois", mois)
     .single();
 
-  const current = (usage as { nb_exercices?: number } | null)?.nb_exercices ?? 0;
+  const current = (usage as Record<string, number> | null)?.[column] ?? 0;
 
-  if (current >= FREE_PLAN_MONTHLY_LIMIT) {
-    return { allowed: false, used: current, limit: FREE_PLAN_MONTHLY_LIMIT };
+  if (current >= limit) {
+    return { allowed: false, used: current, limit };
   }
 
-  // Incrémenter (upsert)
   await supabase
     .from("usage_mensuel")
     .upsert(
-      { user_id: userId, mois, nb_exercices: current + 1 },
+      { user_id: userId, mois, [column]: current + 1 },
       { onConflict: "user_id,mois" }
     );
 
   return { allowed: true };
+}
+
+export async function checkAndIncrementExerciceUsage(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ allowed: boolean; used?: number; limit?: number }> {
+  return checkAndIncrement(supabase, userId, "nb_exercices", FREE_PLAN_MONTHLY_LIMIT);
+}
+
+export async function checkAndIncrementCorrectionUsage(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ allowed: boolean; used?: number; limit?: number }> {
+  return checkAndIncrement(supabase, userId, "nb_corrections", FREE_PLAN_MONTHLY_CORRECTIONS);
+}
+
+export async function checkAndIncrementRemediationUsage(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ allowed: boolean; used?: number; limit?: number }> {
+  return checkAndIncrement(supabase, userId, "nb_remediations", FREE_PLAN_MONTHLY_REMEDIATIONS);
 }
 
 /**
