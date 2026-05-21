@@ -36,8 +36,8 @@ const PLANS = {
   pro: {
     name: "Pro Prof",
     tagline: "Pour un professeur actif",
-    price: { monthly: 29, annual: 199 },
-    priceNote: { monthly: "/mois · sans engagement", annual: "/an — économise 149€" },
+    price: { monthly: 21, annual: 189 },
+    priceNote: { monthly: "/mois · sans engagement", annual: "/an — économise 63€" },
     color: ACCENT,
     bg: "#eff6ff",
     border: ACCENT,
@@ -168,7 +168,7 @@ export default function PricingPage() {
           padding: "12px 20px", marginBottom: 28, justifyContent: "center",
         }}>
           <span style={{ fontSize: 14, fontWeight: 800, color: "#FF3B30" }}>🔥 30 places Early Adopter</span>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>Pack Pro à <strong style={{ color: "#fff" }}>149€/an</strong> au lieu de 199€/an</span>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>Pack Pro à <strong style={{ color: "#fff" }}>149€/an</strong> au lieu de 189€/an</span>
           <a href="/register?plan=early-adopter" style={{
             background: "linear-gradient(135deg, #FF3B30, #0A84FF)", color: "#fff",
             padding: "7px 16px", borderRadius: 8, fontWeight: 700, fontSize: 12,
@@ -199,7 +199,7 @@ export default function PricingPage() {
                   marginLeft: 8, fontSize: 10, background: "#10b981",
                   color: "#fff", borderRadius: 8, padding: "2px 6px",
                 }}>
-                  −43%
+                  −25%
                 </span>
               )}
             </button>

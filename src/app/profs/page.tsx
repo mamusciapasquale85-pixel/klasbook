@@ -194,8 +194,8 @@ export default function ProfsLandingPage() {
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>Accès complet · Remédiations IA illimitées<br />Rapports PDF · Portail parents · Historique complet</div>
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <span style={{ fontSize: "3rem", fontWeight: 900, letterSpacing: "-2px", display: "block", lineHeight: 1, marginBottom: 4 }}>29€</span>
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>/mois · ou 199€/an</span>
+            <span style={{ fontSize: "3rem", fontWeight: 900, letterSpacing: "-2px", display: "block", lineHeight: 1, marginBottom: 4 }}>21€</span>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>/mois · ou 189€/an</span>
           </div>
         </div>
         <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: "22px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>

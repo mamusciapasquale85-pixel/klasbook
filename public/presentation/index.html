@@ -717,8 +717,8 @@ footer a:hover { color: var(--text2); }
     <span class="h-badge-dot"></span>
     Disponible maintenant — Belgique FWB
   </div>
-  <h1>L'IA qui aide les profs FWB à <em>gagner du temps</em> chaque semaine.</h1>
-  <p class="h-sub">Exercices IA, remédiations automatiques, bulletins, correction de copies — tout conforme aux référentiels FWB. Conçu par un prof belge, pour les profs.</p>
+  <h1>Klasbook transforme tes évaluations en <em>remédiations, bulletins et suivis élèves</em> en quelques minutes.</h1>
+  <p class="h-sub">Exercices IA ciblés, bulletins FWB automatisés, remédiation différenciée, suivi de chaque élève — tout conforme aux référentiels IFPC. Conçu par un prof FWB, pour les profs.</p>
   <div class="h-actions">
     <a href="https://klasbook.be/login" class="btn-primary">
       Créer mon compte gratuit
@@ -1103,13 +1103,22 @@ footer a:hover { color: var(--text2); }
     <div class="sec-title" style="margin:0 auto 10px;max-width:500px">Simple. Transparent. Sans engagement.</div>
     <div class="sec-sub" style="margin:0 auto 24px">Commence gratuitement. Passe Pro quand tu veux. Annule quand tu veux.</div>
 
+    <!-- EARLY ADOPTER BANNER -->
+    <div style="background:linear-gradient(135deg,rgba(37,99,235,0.08),rgba(249,115,22,0.08));border:1.5px solid rgba(249,115,22,0.4);border-radius:12px;padding:16px 24px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <span style="font-size:1rem;font-weight:800;color:#F97316;">🔥 Offre Early Adopter — 30 places</span>
+        <span style="margin-left:10px;font-size:0.9rem;color:#475569;">Pack Pro à <strong style="color:#1E293B;">149€/an</strong> au lieu de 189€/an · Accès prioritaire · Influence sur la roadmap</span>
+      </div>
+      <a href="https://cote-platform.vercel.app/register" style="background:#F97316;color:white;padding:10px 22px;border-radius:8px;font-weight:700;font-size:0.88rem;text-decoration:none;white-space:nowrap;">Réserver ma place →</a>
+    </div>
+
     <div class="pr-toggle">
       <span id="lbl-m" class="active">Mensuel</span>
       <div class="pr-toggle-track" id="toggle" onclick="toggleBilling()" style="cursor:pointer">
         <div class="pr-toggle-thumb"></div>
       </div>
       <span id="lbl-a">Annuel</span>
-      <span class="pr-save">-34%</span>
+      <span class="pr-save">-43%</span>
     </div>
 
     <div class="pr-grid">
@@ -1135,7 +1144,7 @@ footer a:hover { color: var(--text2); }
       <div class="pr-card feat">
         <div class="pr-badge">Le plus populaire</div>
         <div class="pr-name">Pro</div>
-        <div class="pr-price" id="pr-pro">19€</div>
+        <div class="pr-price" id="pr-pro">21€</div>
         <div class="pr-period" id="pr-pro-p">/mois · sans engagement</div>
         <div class="pr-desc">Pour les enseignants qui veulent tout automatiser.</div>
         <ul class="pr-list">
@@ -1152,28 +1161,44 @@ footer a:hover { color: var(--text2); }
           <li>Historique complet</li>
           <li>Support prioritaire</li>
         </ul>
-        <a href="https://klasbook.be/login" class="pr-btn pr-btn-primary">Essayer gratuitement</a>
+        <a href="https://cote-platform.vercel.app/register" class="pr-btn pr-btn-primary">Essayer 14 jours gratuitement →</a>
       </div>
 
       <div class="pr-card">
         <div class="pr-name">École</div>
-        <div class="pr-price" id="pr-ecole">149€</div>
-        <div class="pr-period" id="pr-ecole-p">/mois · jusqu'à 20 profs</div>
-        <div class="pr-desc">Pour les établissements qui veulent équiper toute l'équipe.</div>
+        <div class="pr-price" id="pr-ecole">249€</div>
+        <div class="pr-period" id="pr-ecole-p">/mois · jusqu'à 10 profs</div>
+        <div class="pr-desc">Pour les établissements qui veulent équiper toute l'équipe pédagogique.</div>
         <ul class="pr-list">
           <li>Tout le plan Pro</li>
-          <li>Jusqu'à 20 comptes enseignants</li>
+          <li>Jusqu'à 10 comptes enseignants</li>
           <li>Tableau de bord direction</li>
-          <li>Onboarding dédié</li>
+          <li>Onboarding & formation inclus</li>
           <li>Import CSV élèves/classes</li>
           <li>Facturation centralisée (bon de commande)</li>
           <li>DPA conforme RGPD</li>
-          <li>Support téléphonique</li>
+          <li>Support téléphonique dédié</li>
         </ul>
-        <a href="mailto:pasquale@klasbook.be?subject=Klasbook%20%C3%89cole%20%E2%80%94%20Demande%20d'info" class="pr-btn pr-btn-secondary">Contacter Pasquale</a>
+        <a href="mailto:pasquale@klasbook.be?subject=Klasbook%20%C3%89cole%20%E2%80%94%20Demande%20d'info" class="pr-btn pr-btn-secondary">Contacter Pasquale →</a>
+      </div>
+
+      <div class="pr-card">
+        <div class="pr-name">Pack Pilote École</div>
+        <div class="pr-price">490€</div>
+        <div class="pr-period">pour 3 mois · 5 profs</div>
+        <div class="pr-desc">Pour tester Klasbook en équipe avant de s'engager sur l'année.</div>
+        <ul class="pr-list">
+          <li>5 comptes enseignants</li>
+          <li>Accompagnement personnalisé</li>
+          <li>Rapport d'impact à 3 mois</li>
+          <li>Bascule vers Pack École sans frais</li>
+          <li>Idéal pour présenter à la direction</li>
+          <li class="no">Tableau de bord direction</li>
+        </ul>
+        <a href="mailto:pasquale@klasbook.be?subject=Pack%20Pilote%20%C3%89cole" class="pr-btn pr-btn-secondary">Nous contacter →</a>
       </div>
     </div>
-    <div class="pr-note">Aucune carte bancaire pour le plan Starter · Annulation à tout moment · Données hébergées en Europe (Supabase EU)</div>
+    <div class="pr-note">14 jours gratuits sans carte bancaire · Annulation à tout moment · Données hébergées en Europe (RGPD) · 1 mois offert par ami parrainé</div>
   </div>
 </section>
 
@@ -1251,11 +1276,11 @@ footer a:hover { color: var(--text2); }
 
 <!-- CTA FINAL -->
 <section class="cta-f">
-  <h2>Prêt à gagner des heures chaque semaine ?</h2>
-  <p>Rejoins les enseignants FWB qui ont automatisé leur préparation pédagogique avec Klasbook.</p>
+  <h2>Prêt à transformer tes évaluations en remédiations en quelques minutes ?</h2>
+  <p>Rejoins les enseignants FWB qui gagnent du temps chaque semaine avec Klasbook. 🔥 30 places Early Adopter à 149€/an.</p>
   <div class="h-actions">
-    <a href="https://klasbook.be/login" class="btn-white">
-      Créer mon compte gratuit
+    <a href="https://cote-platform.vercel.app/register" class="btn-white">
+      Essayer 14 jours gratuitement
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
     </a>
     <a href="mailto:pasquale@klasbook.be" class="btn-ghost">Parler à Pasquale</a>
@@ -1280,15 +1305,15 @@ function toggleBilling() {
   document.getElementById('lbl-m').classList.toggle('active', !annual);
   document.getElementById('lbl-a').classList.toggle('active', annual);
   if (annual) {
-    document.getElementById('pr-pro').textContent = '149€';
-    document.getElementById('pr-pro-p').textContent = '/an · soit 12,42€/mois';
-    document.getElementById('pr-ecole').textContent = '1 190€';
-    document.getElementById('pr-ecole-p').textContent = '/an · soit 99€/mois';
+    document.getElementById('pr-pro').textContent = '189€';
+    document.getElementById('pr-pro-p').textContent = '/an · soit 15,75€/mois';
+    document.getElementById('pr-ecole').textContent = '1 990€';
+    document.getElementById('pr-ecole-p').textContent = '/an · soit 165€/mois';
   } else {
-    document.getElementById('pr-pro').textContent = '19€';
+    document.getElementById('pr-pro').textContent = '21€';
     document.getElementById('pr-pro-p').textContent = '/mois · sans engagement';
-    document.getElementById('pr-ecole').textContent = '149€';
-    document.getElementById('pr-ecole-p').textContent = '/mois · jusqu\'à 20 profs';
+    document.getElementById('pr-ecole').textContent = '249€';
+    document.getElementById('pr-ecole-p').textContent = '/mois · jusqu\'à 10 profs';
   }
 }
 </script>
