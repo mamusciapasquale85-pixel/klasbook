@@ -130,7 +130,7 @@ export default function VocalRecorder({
         setStatus("processing");
 
         try {
-          const webmBlob = new Blob(chunksRef.current, { type: "audio/webm" });
+          const webmBlob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" });
           const blob = await convertToWav(webmBlob);
           const form = new FormData();
           form.append("audio", blob, "recording.wav");

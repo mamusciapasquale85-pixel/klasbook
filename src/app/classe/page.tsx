@@ -120,12 +120,21 @@ function AddStudentModal({ className, onClose, onSave, saving }: { className: st
   );
 }
 
-type ImportPreviewRow = { prenom: string; nom: string; valid: boolean; error?: string };
+type ImportPreviewRow = { prenom: string; nom: string; email?: string; parent_email?: string; valid: boolean; error?: string };
+
+function downloadCSVTemplate() {
+  const csv = "prenom;nom;email;email_parent\nJean;Dupont;jean.dupont@ecole.be;parent.dupont@gmail.com\nMarie;Martin;marie.martin@ecole.be;";
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "modele_eleves.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
 
 function ImportElevesModal({ className, onClose, onImport, saving }: {
   className: string;
   onClose: () => void;
-  onImport: (rows: { prenom: string; nom: string }[]) => Promise<void>;
+  onImport: (rows: { prenom: string; nom: string; email?: string; parent_email?: string }[]) => Promise<void>;
   saving: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -145,6 +154,8 @@ function ImportElevesModal({ className, onClose, onImport, saving }: {
     const headers = (data[0] as string[]).map(h => String(h).trim().toLowerCase());
     const prenomIdx = headers.findIndex(h => h.includes("prénom") || h.includes("prenom") || h === "first_name" || h === "firstname");
     const nomIdx = headers.findIndex(h => h === "nom" || h === "last_name" || h === "lastname" || h.includes("famille"));
+    const emailIdx = headers.findIndex(h => h === "email" || h === "mail" || h === "email_eleve" || h === "email élève");
+    const parentEmailIdx = headers.findIndex(h => h.includes("parent") || h === "email_parent" || h === "email parent" || h === "mail_parent");
     const usePrenomIdx = prenomIdx >= 0 ? prenomIdx : 0;
     const useNomIdx = nomIdx >= 0 ? nomIdx : 1;
     const dataRows = prenomIdx >= 0 ? data.slice(1) : data;
@@ -152,8 +163,10 @@ function ImportElevesModal({ className, onClose, onImport, saving }: {
       .map(row => {
         const prenom = String(row[usePrenomIdx] ?? "").trim();
         const nom = String(row[useNomIdx] ?? "").trim();
+        const email = emailIdx >= 0 ? String(row[emailIdx] ?? "").trim() || undefined : undefined;
+        const parent_email = parentEmailIdx >= 0 ? String(row[parentEmailIdx] ?? "").trim() || undefined : undefined;
         const valid = prenom.length > 0 && nom.length > 0;
-        return { prenom, nom, valid, error: !valid ? "Prénom ou nom manquant" : undefined };
+        return { prenom, nom, email, parent_email, valid, error: !valid ? "Prénom ou nom manquant" : undefined };
       })
       .filter(r => r.prenom || r.nom);
   }
@@ -168,8 +181,9 @@ function ImportElevesModal({ className, onClose, onImport, saving }: {
 
     const prenomIdx = headers.findIndex(h => h.includes("prénom") || h.includes("prenom") || h === "first_name" || h === "firstname");
     const nomIdx = headers.findIndex(h => h === "nom" || h === "last_name" || h === "lastname" || h.includes("famille"));
+    const emailIdx = headers.findIndex(h => h === "email" || h === "mail" || h === "email_eleve" || h === "email élève");
+    const parentEmailIdx = headers.findIndex(h => h.includes("parent") || h === "email_parent" || h === "email parent" || h === "mail_parent");
 
-    // Si pas d'en-têtes reconnus, essaie colonnes 0 et 1
     const usePrenomIdx = prenomIdx >= 0 ? prenomIdx : 0;
     const useNomIdx = nomIdx >= 0 ? nomIdx : 1;
 
@@ -179,8 +193,10 @@ function ImportElevesModal({ className, onClose, onImport, saving }: {
       const cols = line.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ""));
       const prenom = cols[usePrenomIdx] ?? "";
       const nom = cols[useNomIdx] ?? "";
+      const email = emailIdx >= 0 ? cols[emailIdx]?.trim() || undefined : undefined;
+      const parent_email = parentEmailIdx >= 0 ? cols[parentEmailIdx]?.trim() || undefined : undefined;
       const valid = prenom.length > 0 && nom.length > 0;
-      return { prenom, nom, valid, error: !valid ? "Prénom ou nom manquant" : undefined };
+      return { prenom, nom, email, parent_email, valid, error: !valid ? "Prénom ou nom manquant" : undefined };
     }).filter(r => r.prenom || r.nom);
   }
 
@@ -210,7 +226,7 @@ function ImportElevesModal({ className, onClose, onImport, saving }: {
   async function handleImport() {
     if (validRows.length === 0) return;
     try {
-      await onImport(validRows.map(r => ({ prenom: r.prenom, nom: r.nom })));
+      await onImport(validRows.map(r => ({ prenom: r.prenom, nom: r.nom, email: r.email, parent_email: r.parent_email })));
       setImportResult(`✅ ${validRows.length} élève${validRows.length > 1 ? "s" : ""} importé${validRows.length > 1 ? "s" : ""} avec succès.`);
       setImportDone(true);
     } catch (e) {
@@ -227,15 +243,19 @@ function ImportElevesModal({ className, onClose, onImport, saving }: {
         <>
           <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 14px", marginBottom: 14, fontSize: 13, color: "#475569" }}>
             <b>Formats acceptés :</b> CSV (<code>.csv</code>) ou Excel (<code>.xlsx</code>).<br />
-            Colonnes attendues : <code>prenom</code> et <code>nom</code> (ou <code>first_name</code> / <code>last_name</code>).<br />
+            Colonnes : <code>prenom</code>, <code>nom</code>, <code>email</code> (optionnel), <code>email_parent</code> (optionnel).<br />
             Pour CSV : séparateur <code>;</code> ou <code>,</code>. La première ligne peut être un en-tête.
           </div>
 
-          <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
             <button
               onClick={() => fileInputRef.current?.click()}
               style={{ padding: "9px 18px", borderRadius: 9, border: "1.5px solid #e2e8f0", background: "#f8fafc", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
               📂 Choisir un fichier CSV / Excel
+            </button>
+            <button onClick={downloadCSVTemplate}
+              style={{ padding: "9px 14px", borderRadius: 9, border: "1.5px solid #BFDBFE", background: "#EFF6FF", color: "#1D4ED8", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+              📋 Modèle CSV
             </button>
             {fileName && <span style={{ fontSize: 13, color: "#64748b", alignSelf: "center" }}>{fileName}</span>}
           </div>
@@ -260,6 +280,8 @@ function ImportElevesModal({ className, onClose, onImport, saving }: {
                     <tr style={{ background: "#f8fafc" }}>
                       <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, borderBottom: "1px solid #e2e8f0" }}>Prénom</th>
                       <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, borderBottom: "1px solid #e2e8f0" }}>Nom</th>
+                      {preview.some(r => r.email) && <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, borderBottom: "1px solid #e2e8f0" }}>Email élève</th>}
+                      {preview.some(r => r.parent_email) && <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, borderBottom: "1px solid #e2e8f0" }}>Email parent</th>}
                       <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, borderBottom: "1px solid #e2e8f0" }}>Statut</th>
                     </tr>
                   </thead>
@@ -268,6 +290,8 @@ function ImportElevesModal({ className, onClose, onImport, saving }: {
                       <tr key={i} style={{ background: r.valid ? "transparent" : "#fef2f2" }}>
                         <td style={{ padding: "7px 12px", borderBottom: "1px solid #f3f4f6" }}>{r.prenom || "—"}</td>
                         <td style={{ padding: "7px 12px", borderBottom: "1px solid #f3f4f6" }}>{r.nom || "—"}</td>
+                        {preview.some(p => p.email) && <td style={{ padding: "7px 12px", borderBottom: "1px solid #f3f4f6", fontSize: 11, color: "#64748b" }}>{r.email || "—"}</td>}
+                        {preview.some(p => p.parent_email) && <td style={{ padding: "7px 12px", borderBottom: "1px solid #f3f4f6", fontSize: 11, color: "#64748b" }}>{r.parent_email || "—"}</td>}
                         <td style={{ padding: "7px 12px", borderBottom: "1px solid #f3f4f6", textAlign: "center" }}>
                           {r.valid ? <span style={{ color: "#16a34a", fontWeight: 700 }}>✓</span> : <span style={{ color: "#b91c1c", fontSize: 11 }}>{r.error}</span>}
                         </td>
@@ -383,12 +407,19 @@ export default function ClassePage() {
     } finally { setSaving(false); }
   }
 
-  async function handleImportEleves(rows: { prenom: string; nom: string }[]) {
+  async function handleImportEleves(rows: { prenom: string; nom: string; email?: string; parent_email?: string }[]) {
     if (!ctx || !activeClass) throw new Error("Contexte manquant");
     setSaving(true);
     try {
       for (const row of rows) {
-        await addStudentAndEnroll(ctx, { classGroupId: activeClass, first_name: row.prenom, last_name: row.nom });
+        const studentId = await addStudentAndEnroll(ctx, { classGroupId: activeClass, first_name: row.prenom, last_name: row.nom });
+        if (row.email || row.parent_email) {
+          await fetch(`/api/eleves/${studentId}/contacts`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: row.email ?? null, parent_email: row.parent_email ?? null }),
+          });
+        }
       }
       loadEleves(activeClass);
     } finally {
@@ -447,11 +478,28 @@ export default function ClassePage() {
             🗑
           </button>
         )}
-        {/* ── NOUVEAU : Bouton importer liste ── */}
+        {/* ── Bouton importer liste ── */}
         {activeClass && ctx && (
           <button onClick={() => setShowImportEleves(true)}
             style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #BFDBFE", background: "#EFF6FF", color: "#1D4ED8", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            📥 Importer liste
+            📥 Importer
+          </button>
+        )}
+        {/* ── Bouton exporter CSV ── */}
+        {activeClass && eleves.length > 0 && (
+          <button onClick={() => {
+            const activeClassData = classes.find(c => c.id === activeClass);
+            const rows = [["prenom", "nom", "email", "email_parent"]];
+            eleves.forEach(e => rows.push([e.prenom, e.nom, "", ""]));
+            const csv = rows.map(r => r.join(";")).join("\n");
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = `${activeClassData?.name ?? "classe"}_eleves.csv`; a.click();
+            URL.revokeObjectURL(url);
+          }}
+            style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #D1FAE5", background: "#ECFDF5", color: "#065F46", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            📤 Exporter CSV
           </button>
         )}
       </div>

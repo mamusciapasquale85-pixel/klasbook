@@ -18,8 +18,10 @@ const CACHE_TTL_DAYS = 90; // régénérer après 90 jours (changements de voix 
 
 type AzureVoice =
   | "nl-BE-ArnaudNeural"
+  | "nl-BE-DenaNeural"
   | "en-GB-RyanNeural"
-  | "es-ES-AlvaroNeural";
+  | "es-ES-AlvaroNeural"
+  | "fr-BE-GerardNeural";
 
 /**
  * Génère une clé de cache stable à partir du texte + voix.
@@ -80,14 +82,54 @@ export async function getTtsAudio(
     });
 
   if (uploadErr) {
-    // En cas d'échec du cache → retourner quand même l'audio (non mis en cache)
     console.error("[TTS Cache] Upload failed:", uploadErr.message);
-    const blob = new Blob([audioBuffer], { type: "audio/mpeg" });
-    return URL.createObjectURL(blob);
   }
 
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(key);
   return data.publicUrl;
+}
+
+/**
+ * Variante retournant un Buffer audio (pour les API routes qui streament l'audio directement).
+ * Même stratégie cache que getTtsAudio(), mais retourne les bytes plutôt qu'une URL publique.
+ */
+export async function getTtsBuffer(
+  text: string,
+  voice: AzureVoice
+): Promise<Buffer> {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const key = cacheKey(text, voice);
+
+  // 1. Vérifier le cache
+  const { data: existing } = await supabase.storage
+    .from(BUCKET)
+    .list("", { search: key });
+
+  if (existing && existing.length > 0) {
+    const file = existing.find((f) => f.name === key);
+    if (file) {
+      const age = Date.now() - new Date(file.created_at).getTime();
+      if (age < CACHE_TTL_DAYS * 24 * 60 * 60 * 1000) {
+        const { data: blob } = await supabase.storage.from(BUCKET).download(key);
+        if (blob) return Buffer.from(await blob.arrayBuffer());
+      }
+    }
+  }
+
+  // 2. Appel Azure Speech TTS
+  const audioBuffer = await callAzureTts(text, voice);
+
+  // 3. Upload en cache (non-bloquant en cas d'échec)
+  supabase.storage
+    .from(BUCKET)
+    .upload(key, audioBuffer, { contentType: "audio/mpeg", upsert: true })
+    .catch((err: Error) => console.error("[TTS Cache] Upload failed:", err.message));
+
+  return Buffer.from(audioBuffer);
 }
 
 /**
@@ -103,7 +145,7 @@ async function callAzureTts(text: string, voice: AzureVoice): Promise<ArrayBuffe
   const ssml = `
     <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${voice.slice(0, 5)}">
       <voice name="${voice}">
-        <prosody rate="slow">${text}</prosody>
+        <prosody rate="0.9">${text}</prosody>
       </voice>
     </speak>
   `.trim();

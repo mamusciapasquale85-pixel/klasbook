@@ -36,8 +36,8 @@ const PLANS = {
   pro: {
     name: "Pro Prof",
     tagline: "Pour un professeur actif",
-    price: { monthly: 9, annual: 79 },
-    priceNote: { monthly: "/mois", annual: "/an — économise 29€" },
+    price: { monthly: 29, annual: 199 },
+    priceNote: { monthly: "/mois · sans engagement", annual: "/an — économise 149€" },
     color: ACCENT,
     bg: "#eff6ff",
     border: ACCENT,
@@ -53,15 +53,15 @@ const PLANS = {
       { label: "Portail parents intégré", ok: true },
       { label: "Historique complet", ok: true },
     ],
-    cta: "Essai gratuit 30 jours",
+    cta: "Essai gratuit 14 jours",
     ctaHref: "/register?plan=pro",
     highlight: true,
   },
   ecole: {
     name: "École",
     tagline: "Pour toute l'équipe enseignante",
-    price: { monthly: 49, annual: 490 },
-    priceNote: { monthly: "/mois (jusqu'à 20 profs)", annual: "/an — économise 98€" },
+    price: { monthly: 249, annual: 1990 },
+    priceNote: { monthly: "/mois · jusqu'à 10 profs", annual: "/an — économise 998€" },
     color: "#7c3aed",
     bg: "#faf5ff",
     border: "#7c3aed",
@@ -97,12 +97,16 @@ const FAQS = [
     a: "Oui, sans engagement. Annule quand tu veux depuis ton profil. Avec le plan annuel, tu bénéficies d'un remboursement au prorata si tu annules dans les 30 premiers jours.",
   },
   {
-    q: "L'essai gratuit 30 jours nécessite-t-il une carte bancaire ?",
-    a: "Non. Tu crées un compte, tu utilises Klasbook Pro pendant 30 jours, et ta carte n'est demandée qu'au moment où tu choisis de continuer.",
+    q: "L'essai gratuit 14 jours nécessite-t-il une carte bancaire ?",
+    a: "Non. Tu crées un compte, tu utilises Klasbook Pro pendant 14 jours, et ta carte n'est demandée qu'au moment où tu choisis de continuer.",
   },
   {
     q: "Comment fonctionne le plan École pour plusieurs profs ?",
-    a: "La direction crée le compte École, invite les professeurs par email, et chacun accède à son profil individuel. La direction visualise l'activité globale depuis le portail direction. Jusqu'à 20 profs sont inclus ; au-delà, contacte-nous.",
+    a: "La direction crée le compte École, invite les professeurs par email, et chacun accède à son profil individuel. La direction visualise l'activité globale depuis le portail direction. Jusqu'à 10 profs sont inclus ; au-delà, contacte-nous pour le Pack Pilote.",
+  },
+  {
+    q: "C'est quoi le Pack Pilote École ?",
+    a: "C'est une formule 3 mois à 490€ pour 5 profs, idéale pour tester Klasbook en équipe avant de s'engager sur l'année. Tu bénéficies d'un accompagnement personnalisé et d'un rapport d'impact à l'issue du pilote. Contacte-nous à contact@klasbook.be.",
   },
 ];
 
@@ -152,9 +156,25 @@ export default function PricingPage() {
             taillé pour tes besoins
           </span>
         </h1>
-        <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 16, maxWidth: 480, margin: "0 auto 32px" }}>
+        <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 16, maxWidth: 480, margin: "0 auto 24px" }}>
           Commence gratuitement. Passe au Pro quand tu veux. Aucun engagement.
         </p>
+
+        {/* Early adopter banner */}
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+          background: "linear-gradient(135deg, rgba(255,59,48,0.12), rgba(10,132,255,0.10))",
+          border: "1px solid rgba(255,59,48,0.35)", borderRadius: 12,
+          padding: "12px 20px", marginBottom: 28, justifyContent: "center",
+        }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: "#FF3B30" }}>🔥 30 places Early Adopter</span>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>Pack Pro à <strong style={{ color: "#fff" }}>149€/an</strong> au lieu de 199€/an</span>
+          <a href="/register?plan=early-adopter" style={{
+            background: "linear-gradient(135deg, #FF3B30, #0A84FF)", color: "#fff",
+            padding: "7px 16px", borderRadius: 8, fontWeight: 700, fontSize: 12,
+            textDecoration: "none", whiteSpace: "nowrap",
+          }}>Réserver →</a>
+        </div>
 
         {/* Toggle billing */}
         <div style={{
@@ -179,7 +199,7 @@ export default function PricingPage() {
                   marginLeft: 8, fontSize: 10, background: "#10b981",
                   color: "#fff", borderRadius: 8, padding: "2px 6px",
                 }}>
-                  −30%
+                  −43%
                 </span>
               )}
             </button>
@@ -283,11 +303,10 @@ export default function PricingPage() {
       }}>
         <div style={{ fontSize: 32, marginBottom: 10 }}>🛡️</div>
         <div style={{ fontWeight: 800, fontSize: 16, color: "#fff", marginBottom: 8 }}>
-          30 jours satisfait ou remboursé
+          14 jours gratuits — satisfait ou remboursé
         </div>
         <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 1.7 }}>
-          Si Klasbook ne répond pas à tes attentes dans les 30 premiers jours, on te rembourse intégralement.
-          Sans question, sans tracas.
+          Essaie Klasbook Pro 14 jours sans carte bancaire. Si Klasbook ne répond pas à tes attentes dans les 30 premiers jours après souscription, on te rembourse intégralement. Sans question, sans tracas.
         </div>
       </div>
 

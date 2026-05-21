@@ -122,13 +122,6 @@ export async function assessPronunciation(
   }
 
   const data = (await res.json()) as AzureSTTResponse;
-
-  // DEBUG — à retirer après diagnostic
-  console.log("[azure-speech] RecognitionStatus:", data.RecognitionStatus);
-  console.log("[azure-speech] NBest[0] keys:", data.NBest?.[0] ? Object.keys(data.NBest[0]) : "no NBest");
-  console.log("[azure-speech] PronunciationAssessment:", JSON.stringify(data.NBest?.[0]?.PronunciationAssessment ?? null));
-  console.log("[azure-speech] Words sample:", JSON.stringify(data.NBest?.[0]?.Words?.slice(0, 2) ?? []));
-
   return parseAssessmentResult(data);
 }
 

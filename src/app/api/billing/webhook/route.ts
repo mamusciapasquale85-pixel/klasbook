@@ -22,8 +22,8 @@ function getSupabaseAdmin() {
   return createClient(url, key);
 }
 
-function planFromMetadata(subscription: Stripe.Subscription): string {
-  return (subscription.metadata?.plan as string) ?? "pro";
+function planFromMetadata(subscription: Stripe.Subscription): "pro" | "ecole" {
+  return subscription.metadata?.plan === "ecole" ? "ecole" : "pro";
 }
 
 async function getUserData(userId: string): Promise<{ email: string; firstName: string } | null> {

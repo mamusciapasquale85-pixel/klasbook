@@ -33,8 +33,8 @@ async function getUserData(userId: string): Promise<{ email: string; firstName: 
   return { email: authUser.user.email, firstName };
 }
 
-function planFromMetadata(subscription: Stripe.Subscription): string {
-  return (subscription.metadata?.plan as string) ?? "pro";
+function planFromMetadata(subscription: Stripe.Subscription): "pro" | "ecole" {
+  return subscription.metadata?.plan === "ecole" ? "ecole" : "pro";
 }
 
 export async function GET(req: Request) {
