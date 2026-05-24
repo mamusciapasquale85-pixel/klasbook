@@ -42,7 +42,7 @@ export async function middleware(request: NextRequest) {
 
     if (!hasAuthCookie) {
       const url = request.nextUrl.clone();
-      url.pathname = "/login";
+      url.pathname = pathname.startsWith("/parent") ? "/parent-login" : "/login";
       return NextResponse.redirect(url);
     }
   }
