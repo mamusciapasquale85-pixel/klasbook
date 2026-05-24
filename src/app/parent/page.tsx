@@ -18,6 +18,7 @@ type Assessment = { id: string; title: string; date: string; type: string; max_p
 type Resultat = { assessment_id: string; value: number | null; level: string | null };
 type Apprentissage = { id: string; name: string; order_index: number };
 type Remarque = { id: string; date: string; note: string; teacher_name?: string };
+type AgendaItem = { id: string; date: string; type: "lesson" | "homework" | "test"; title: string; details: string | null };
 
 type StudentData = {
   student: Student;
@@ -26,6 +27,7 @@ type StudentData = {
   resultats: Resultat[];
   apprentissages: Apprentissage[];
   remarques: Remarque[];
+  agendaItems: AgendaItem[];
 };
 
 // ─── Level badge ──────────────────────────────────────────────────────────────
@@ -45,7 +47,7 @@ export default function ParentPortal() {
   const [error, setError] = useState<string | null>(null);
   const [children, setChildren] = useState<StudentData[]>([]);
   const [activeChild, setActiveChild] = useState(0);
-  const [activeTab, setActiveTab] = useState<"resultats" | "remarques">("resultats");
+  const [activeTab, setActiveTab] = useState<"resultats" | "remarques" | "agenda">("resultats");
 
   const loadData = useCallback(async () => {
     try {
@@ -114,7 +116,7 @@ export default function ParentPortal() {
           resultats = (res ?? []) as Resultat[];
         }
 
-        // Remarques disciplinaires (table remarques si elle existe)
+        // Remarques disciplinaires
         let remarques: Remarque[] = [];
         try {
           const { data: rem } = await supabase
@@ -126,6 +128,20 @@ export default function ParentPortal() {
           remarques = (rem ?? []) as Remarque[];
         } catch { /* table peut ne pas exister */ }
 
+        // Agenda — éléments à venir pour les classes de l'élève
+        let agendaItems: AgendaItem[] = [];
+        if (classIds.length > 0) {
+          const today = new Date().toISOString().split("T")[0];
+          const { data: ag } = await supabase
+            .from("agenda_items")
+            .select("id, date, type, title, details")
+            .in("class_group_id", classIds)
+            .gte("date", today)
+            .order("date", { ascending: true })
+            .limit(30);
+          agendaItems = (ag ?? []) as AgendaItem[];
+        }
+
         result.push({
           student: stud,
           classes,
@@ -133,6 +149,7 @@ export default function ParentPortal() {
           resultats,
           apprentissages: (apprentissages ?? []) as Apprentissage[],
           remarques,
+          agendaItems,
         });
       }
 
@@ -253,10 +270,10 @@ export default function ParentPortal() {
 
         {/* Tab bar */}
         <div style={{ display: "flex", gap: 10, marginBottom: 24 }}>
-          {(["resultats", "remarques"] as const).map(tab => (
+          {(["resultats", "agenda", "remarques"] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               style={{ background: activeTab === tab ? "rgba(10,132,255,0.9)" : "#1e293b", border: `1px solid ${activeTab === tab ? "#0A84FF" : "rgba(255,255,255,0.12)"}`, borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer" }}>
-              {tab === "resultats" ? "📊 Résultats" : `⚠️ Remarques${child.remarques.length > 0 ? ` (${child.remarques.length})` : ""}`}
+              {tab === "resultats" ? "📊 Résultats" : tab === "agenda" ? `📅 Agenda${child.agendaItems.length > 0 ? ` (${child.agendaItems.length})` : ""}` : `⚠️ Remarques${child.remarques.length > 0 ? ` (${child.remarques.length})` : ""}`}
             </button>
           ))}
         </div>
@@ -318,6 +335,45 @@ export default function ParentPortal() {
                   </div>
                 )}
               </>
+            )}
+          </div>
+        )}
+
+        {/* Agenda tab */}
+        {activeTab === "agenda" && (
+          <div>
+            {child.agendaItems.length === 0 ? (
+              <div style={{ ...CARD, padding: 48, textAlign: "center" }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>📅</div>
+                <div style={{ color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>Aucun élément à venir dans l&apos;agenda.</div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {child.agendaItems.map(item => {
+                  const isTest = item.type === "test";
+                  const isHomework = item.type === "homework";
+                  const icon = isTest ? "📝" : isHomework ? "📚" : "📖";
+                  const iconBg = isTest ? "rgba(255,59,48,0.15)" : isHomework ? "rgba(10,132,255,0.15)" : "rgba(52,211,153,0.15)";
+                  const daysLeft = Math.ceil((new Date(item.date).getTime() - Date.now()) / 86400000);
+                  return (
+                    <div key={item.id} style={{ ...CARD, padding: "14px 18px", display: "flex", alignItems: "flex-start", gap: 14 }}>
+                      <div style={{ width: 42, height: 42, borderRadius: 10, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{icon}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: "#f8fafc" }}>{item.title}</div>
+                        {item.details && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 3, lineHeight: 1.5 }}>{item.details}</div>}
+                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 4 }}>
+                          {new Date(item.date).toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" })}
+                        </div>
+                      </div>
+                      <div style={{ flexShrink: 0, textAlign: "right" }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: daysLeft === 0 ? "#fbbf24" : daysLeft <= 2 ? "#fb923c" : "rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}>
+                          {daysLeft === 0 ? "Aujourd'hui" : daysLeft === 1 ? "Demain" : `Dans ${daysLeft}j`}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
