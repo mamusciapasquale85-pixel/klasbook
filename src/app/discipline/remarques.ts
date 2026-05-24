@@ -1,15 +1,10 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import type { TeacherContext } from "@/lib/teacher-context";
+export type { TeacherContext } from "@/lib/teacher-context";
+export { getTeacherContext } from "@/lib/teacher-context";
 
 export type UUID = string;
-
-export type TeacherContext = {
-  supabase: ReturnType<typeof createClient>;
-  schoolId: UUID;
-  academicYearId: UUID;
-  teacherId: UUID;
-};
 
 export type ClassGroup = {
   id: UUID;
@@ -68,41 +63,6 @@ function isMissingDisciplineTable(error: unknown): boolean {
 function isMissingColumn(error: unknown, column: string): boolean {
   const msg = toNiceError(error).toLowerCase();
   return msg.includes(column.toLowerCase()) && (msg.includes("schema cache") || msg.includes("does not exist"));
-}
-
-export async function getTeacherContext(): Promise<TeacherContext> {
-  const supabase = createClient();
-
-  const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr) throw userErr;
-  const user = userData.user;
-  if (!user) throw new Error("Pas connecté");
-
-  const { data: mem, error: memErr } = await supabase
-    .from(T.SCHOOL_MEMBERSHIPS)
-    .select("school_id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-
-  if (memErr) throw memErr;
-  if (!mem?.school_id) throw new Error("Impossible de trouver school_id (school_memberships).");
-
-  const schoolId = mem.school_id as UUID;
-  const teacherId = user.id as UUID;
-
-  const { data: ay, error: ayErr } = await supabase
-    .from(T.ACADEMIC_YEARS)
-    .select("id")
-    .eq("school_id", schoolId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (ayErr) throw ayErr;
-  if (!ay?.id) throw new Error("Aucune année scolaire trouvée.");
-
-  return { supabase, schoolId, academicYearId: ay.id as UUID, teacherId };
 }
 
 export async function listClassGroups(ctx: TeacherContext): Promise<ClassGroup[]> {
@@ -177,7 +137,20 @@ export async function createDisciplineNote(
   };
 
   let insert = await ctx.supabase.from(T.DISCIPLINE_NOTES).insert({ ...base, teacher_id: ctx.teacherId });
-  if (!insert.error) return;
+  if (!insert.error) {
+    fetch("/api/push-notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentId: params.studentId,
+        schoolId: ctx.schoolId,
+        title: "⚠️ Nouvelle remarque",
+        body: note.length > 100 ? note.slice(0, 97) + "…" : note,
+        url: "/parent",
+      }),
+    }).catch(() => {});
+    return;
+  }
 
   if (isMissingDisciplineTable(insert.error)) {
     throw new Error("La table discipline_notes n’existe pas. Applique la migration SQL.");

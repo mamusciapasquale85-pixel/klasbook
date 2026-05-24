@@ -1,15 +1,10 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import type { TeacherContext } from "@/lib/teacher-context";
+export type { TeacherContext } from "@/lib/teacher-context";
+export { getTeacherContext } from "@/lib/teacher-context";
 
 export type UUID = string;
-
-export type TeacherContext = {
-  supabase: ReturnType<typeof createClient>;
-  schoolId: UUID;
-  academicYearId: UUID;
-  teacherUserId: UUID;
-};
 
 export type ClassGroup = {
   id: UUID;
@@ -298,42 +293,6 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
-}
-
-export async function getTeacherContext(): Promise<TeacherContext> {
-  const supabase = createClient();
-
-  const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr) throw userErr;
-  const user = userData.user;
-  if (!user) throw new Error("Pas connecté");
-
-  const { data: mem, error: memErr } = await supabase
-    .from(T.SCHOOL_MEMBERSHIPS)
-    .select("school_id")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (memErr) throw memErr;
-  if (!mem?.school_id) throw new Error("Impossible de trouver school_id (school_memberships).");
-
-  const schoolId: UUID = mem.school_id;
-  const teacherUserId: UUID = user.id;
-
-  const { data: ay, error: ayErr } = await supabase
-    .from(T.ACADEMIC_YEARS)
-    .select("id")
-    .eq("school_id", schoolId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (ayErr) throw ayErr;
-  if (!ay?.id) throw new Error("Aucune année scolaire trouvée (academic_years).");
-
-  return { supabase, schoolId, academicYearId: ay.id, teacherUserId };
 }
 
 export async function listClassGroups(ctx: TeacherContext): Promise<ClassGroup[]> {
@@ -696,7 +655,7 @@ export async function importAssessmentsCsv(params: {
 
     const payload: AssessmentInsertPayload = {
       school_id: ctx.schoolId,
-      teacher_user_id: ctx.teacherUserId,
+      teacher_user_id: ctx.teacherId,
       class_group_id: classId,
       course_id: courseId,
       title,
@@ -738,7 +697,7 @@ export async function importAssessmentsCsv(params: {
     .from(T.ASSESSMENTS)
     .select(ASSESSMENT_IMPORT_EXISTING_SELECT)
     .eq("school_id", ctx.schoolId)
-    .eq("teacher_user_id", ctx.teacherUserId);
+    .eq("teacher_user_id", ctx.teacherId);
 
   if (classIds.length > 0) existingQuery = existingQuery.in("class_group_id", classIds);
   if (courseIds.length > 0) existingQuery = existingQuery.in("course_id", courseIds);
@@ -837,7 +796,7 @@ export async function importAssessmentResultsCsv(params: {
       .from(T.ASSESSMENTS)
       .select("id,class_group_id,date,title")
       .eq("school_id", ctx.schoolId)
-      .eq("teacher_user_id", ctx.teacherUserId)
+      .eq("teacher_user_id", ctx.teacherId)
       .eq("id", targetAssessmentId)
       .maybeSingle();
     if (target.error) throw target.error;
@@ -929,7 +888,7 @@ export async function importAssessmentResultsCsv(params: {
       .from(T.ASSESSMENTS)
       .select("id,class_group_id,date,title")
       .eq("school_id", ctx.schoolId)
-      .eq("teacher_user_id", ctx.teacherUserId)
+      .eq("teacher_user_id", ctx.teacherId)
       .in("id", Array.from(requestedAssessmentIds));
     if (assessmentsById.error) throw assessmentsById.error;
     for (const a of assessmentsById.data ?? []) {
@@ -948,7 +907,7 @@ export async function importAssessmentResultsCsv(params: {
       .from(T.ASSESSMENTS)
       .select("id,class_group_id,date,title")
       .eq("school_id", ctx.schoolId)
-      .eq("teacher_user_id", ctx.teacherUserId)
+      .eq("teacher_user_id", ctx.teacherId)
       .in("class_group_id", Array.from(classIds));
 
     if (requestedAssessmentDates.size > 0) {
@@ -1050,7 +1009,7 @@ export async function importAssessmentResultsCsv(params: {
     const payload: AssessmentResultInsertPayload = {
       school_id: ctx.schoolId,
       academic_year_id: ctx.academicYearId,
-      teacher_id: ctx.teacherUserId,
+      teacher_id: ctx.teacherId,
       student_id: studentId,
       assessment_id: assessmentId,
       value: valueParsed.value,
@@ -1109,7 +1068,7 @@ export async function createAssessment(params: {
 
   const basePayload = {
     school_id: ctx.schoolId,
-    teacher_user_id: ctx.teacherUserId,
+    teacher_user_id: ctx.teacherId,
     cotation_type: cotation_type ?? "points",
     competences_evaluees: competences_evaluees ?? [],
     ...rest,
@@ -1163,7 +1122,7 @@ export async function updateAssessment(params: {
     .update(patch)
     .eq("id", assessmentId)
     .eq("school_id", ctx.schoolId)
-    .eq("teacher_user_id", ctx.teacherUserId)
+    .eq("teacher_user_id", ctx.teacherId)
     .select(ASSESSMENT_SELECT_WITH_APP)
     .maybeSingle();
 
@@ -1176,7 +1135,7 @@ export async function updateAssessment(params: {
       .update(patchWithoutApp)
       .eq("id", assessmentId)
       .eq("school_id", ctx.schoolId)
-      .eq("teacher_user_id", ctx.teacherUserId)
+      .eq("teacher_user_id", ctx.teacherId)
       .select(ASSESSMENT_SELECT_NO_APP)
       .maybeSingle();
   }
@@ -1195,7 +1154,7 @@ export async function deleteAssessment(params: { ctx: TeacherContext; assessment
     .delete()
     .eq("id", assessmentId)
     .eq("school_id", ctx.schoolId)
-    .eq("teacher_user_id", ctx.teacherUserId);
+    .eq("teacher_user_id", ctx.teacherId);
 
   if (error) throw error;
 }
@@ -1215,7 +1174,7 @@ export async function upsertResult(params: {
     .upsert({
       school_id: ctx.schoolId,
       academic_year_id: ctx.academicYearId,
-      teacher_id: ctx.teacherUserId,
+      teacher_id: ctx.teacherId,
       student_id: studentId,
       assessment_id: assessmentId,
       value: value,
@@ -1223,6 +1182,13 @@ export async function upsertResult(params: {
       competency_scores: competencyScores,
     }, { onConflict: "student_id,assessment_id" });
   if (error) throw error;
+
+  // Notifier les parents en arrière-plan (échec silencieux)
+  fetch("/api/push-notify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ studentId, schoolId: ctx.schoolId }),
+  }).catch(() => {});
 }
 
 export async function listResultsForAssessment(params: {
