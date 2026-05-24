@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
@@ -9,10 +9,25 @@ const dmSans = DM_Sans({
   weight: ["400", "500", "600", "700", "800", "900"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#1a56db",
+};
+
 export const metadata: Metadata = {
   title: "Klasbook — La gestion de classe simplifiée pour la FWB",
   description: "Génération d'exercices IA, bulletins, compétences FWB, portails parents — la plateforme pédagogique dédiée aux enseignants de la Fédération Wallonie-Bruxelles.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://klasbook.be"),
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Klasbook",
+  },
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
   openGraph: {
     title: "Klasbook",
     description: "La plateforme pédagogique IA pour les enseignants FWB",
@@ -33,6 +48,18 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="fr">
       <body className={`${dmSans.variable} antialiased`}>
         {children}
+
+        <Script
+          id="register-sw"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+              }
+            `,
+          }}
+        />
 
         {/* PostHog — analytics produit (chargé uniquement si la clé est configurée) */}
         {POSTHOG_KEY && (
