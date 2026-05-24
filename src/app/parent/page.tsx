@@ -40,6 +40,89 @@ function LevelBadge({ level }: { level: string | null }) {
   );
 }
 
+// ─── PDF Bulletin ─────────────────────────────────────────────────────────────
+async function genererBulletinPDF(child: StudentData) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const ML = 15; const PW = 180; let y = 20;
+
+  // En-tête
+  doc.setFillColor(10, 132, 255);
+  doc.rect(0, 0, 210, 14, "F");
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(255, 255, 255);
+  doc.text("KLASBOOK — Portail Parents", ML, 9);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+  doc.text(new Date().toLocaleDateString("fr-BE", { day: "numeric", month: "long", year: "numeric" }), 195, 9, { align: "right" });
+
+  // Nom élève
+  y = 26;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(15, 23, 42);
+  doc.text(`${child.student.first_name} ${child.student.last_name.toUpperCase()}`, ML, y); y += 7;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(100, 116, 139);
+  doc.text(child.classes.map((c: ClassGroup) => c.name).join(", ") || "Classe non assignée", ML, y); y += 10;
+
+  // Ligne séparatrice
+  doc.setDrawColor(226, 232, 240); doc.line(ML, y, ML + PW, y); y += 8;
+
+  // Résultats
+  doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(15, 23, 42);
+  doc.text("Résultats", ML, y); y += 7;
+
+  const LEVEL_COLORS_PDF: Record<string, [number, number, number]> = {
+    TB: [22, 163, 74], B: [134, 239, 172], S: [251, 191, 36], I: [251, 146, 60], NI: [239, 68, 68],
+  };
+
+  if (child.assessments.length === 0) {
+    doc.setFont("helvetica", "italic"); doc.setFontSize(10); doc.setTextColor(100, 116, 139);
+    doc.text("Aucune évaluation enregistrée.", ML, y); y += 8;
+  } else {
+    for (const a of child.assessments) {
+      if (y > 270) { doc.addPage(); y = 20; }
+      const r = child.resultats.find(r => r.assessment_id === a.id) ?? null;
+      const score = r?.level ?? (r?.value !== null && r?.value !== undefined ? (a.max_points ? `${r.value}/${a.max_points}` : `${r.value}`) : "—");
+
+      doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+      doc.text(a.title.length > 60 ? a.title.slice(0, 57) + "…" : a.title, ML, y);
+      doc.setTextColor(100, 116, 139); doc.setFontSize(9);
+      doc.text(new Date(a.date).toLocaleDateString("fr-BE", { day: "numeric", month: "short" }), ML + 130, y);
+
+      if (r?.level && LEVEL_COLORS_PDF[r.level]) {
+        const [rr, gg, bb] = LEVEL_COLORS_PDF[r.level];
+        doc.setFillColor(rr, gg, bb);
+        doc.roundedRect(ML + PW - 16, y - 5, 16, 6, 1.5, 1.5, "F");
+        doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(255, 255, 255);
+        doc.text(r.level, ML + PW - 8, y - 0.5, { align: "center" });
+      } else {
+        doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+        doc.text(score, ML + PW, y, { align: "right" });
+      }
+      y += 7;
+    }
+  }
+
+  y += 4; doc.setDrawColor(226, 232, 240); doc.line(ML, y, ML + PW, y); y += 8;
+
+  // Remarques
+  if (child.remarques.length > 0) {
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(15, 23, 42);
+    doc.text("Remarques disciplinaires", ML, y); y += 7;
+    for (const rem of child.remarques) {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+      doc.text(new Date(rem.date).toLocaleDateString("fr-BE", { day: "numeric", month: "short", year: "numeric" }), ML, y);
+      doc.setTextColor(15, 23, 42);
+      const lines = doc.splitTextToSize(rem.note, PW - 25);
+      doc.text(lines, ML + 25, y); y += lines.length * 5 + 3;
+    }
+  }
+
+  // Pied de page
+  doc.setFont("helvetica", "italic"); doc.setFontSize(8); doc.setTextColor(148, 163, 184);
+  doc.text("Document généré par Klasbook · klasbook.be", 105, 290, { align: "center" });
+
+  doc.save(`bulletin_${child.student.last_name}_${child.student.first_name}.pdf`);
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ParentPortal() {
   const supabase = createClient();
@@ -48,6 +131,7 @@ export default function ParentPortal() {
   const [children, setChildren] = useState<StudentData[]>([]);
   const [activeChild, setActiveChild] = useState(0);
   const [activeTab, setActiveTab] = useState<"resultats" | "remarques" | "agenda">("resultats");
+  const [pushEnabled, setPushEnabled] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -163,6 +247,37 @@ export default function ParentPortal() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  useEffect(() => {
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      navigator.serviceWorker.ready.then(async (reg) => {
+        const sub = await reg.pushManager.getSubscription();
+        setPushEnabled(!!sub);
+      }).catch(() => {});
+    }
+  }, []);
+
+  async function togglePush() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    const reg = await navigator.serviceWorker.ready;
+    if (pushEnabled) {
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch("/api/push-subscribe", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: sub.endpoint }) });
+        await sub.unsubscribe();
+        setPushEnabled(false);
+      }
+    } else {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") return;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      });
+      await fetch("/api/push-subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription: sub.toJSON() }) });
+      setPushEnabled(true);
+    }
+  }
+
   // ─── Helpers ────────────────────────────────────────────────────────────────
   function getResultat(childData: StudentData, assessmentId: string) {
     return childData.resultats.find(r => r.assessment_id === assessmentId) ?? null;
@@ -223,12 +338,28 @@ export default function ParentPortal() {
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: "#fff" }}>Portail Parents</h1>
             <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,0.75)" }}>Klasbook · Suivi scolaire</p>
           </div>
-          <button
-            onClick={async () => { await supabase.auth.signOut(); window.location.href = "/parent-login"; }}
-            style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "8px 14px", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
-          >
-            Déconnexion
-          </button>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button
+              onClick={togglePush}
+              title={pushEnabled ? "Désactiver les notifications" : "Activer les notifications"}
+              style={{ background: pushEnabled ? "rgba(52,211,153,0.2)" : "rgba(255,255,255,0.15)", border: `1px solid ${pushEnabled ? "rgba(52,211,153,0.5)" : "rgba(255,255,255,0.25)"}`, borderRadius: 10, padding: "8px 12px", color: "#fff", fontSize: 16, cursor: "pointer" }}
+            >
+              {pushEnabled ? "🔔" : "🔕"}
+            </button>
+            <button
+              onClick={async () => { if (children[activeChild]) await genererBulletinPDF(children[activeChild]); }}
+              title="Télécharger le bulletin PDF"
+              style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "8px 12px", color: "#fff", fontSize: 16, cursor: "pointer" }}
+            >
+              📄
+            </button>
+            <button
+              onClick={async () => { await supabase.auth.signOut(); window.location.href = "/parent-login"; }}
+              style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "8px 14px", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+            >
+              Déco
+            </button>
+          </div>
         </div>
 
         {/* Child tabs */}

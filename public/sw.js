@@ -24,6 +24,25 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  const { title, body, url } = event.data.json();
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      data: { url: url ?? '/parent' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url ?? '/parent';
+  event.waitUntil(clients.openWindow(url));
+});
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
