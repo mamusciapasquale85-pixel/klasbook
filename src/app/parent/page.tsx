@@ -219,10 +219,16 @@ export default function ParentPortal() {
       <div style={{ background: GRADIENT, padding: "28px 32px 24px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <span style={{ fontSize: 28 }}>👨‍👩‍👧</span>
-          <div>
+          <div style={{ flex: 1 }}>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: "#fff" }}>Portail Parents</h1>
             <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,0.75)" }}>Klasbook · Suivi scolaire</p>
           </div>
+          <button
+            onClick={async () => { await supabase.auth.signOut(); window.location.href = "/parent-login"; }}
+            style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "8px 14px", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
+          >
+            Déconnexion
+          </button>
         </div>
 
         {/* Child tabs */}
