@@ -206,6 +206,7 @@ export default function OnboardingPage() {
     }
   }
 
+  // ─── CORRIGÉ : erreurs upsert maintenant détectées ───────────────────────
   async function handleStep6(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -214,29 +215,33 @@ export default function OnboardingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Session expirée. Reconnectez-vous.");
 
-      const { data: school } = await supabase.from("schools").select("id").ilike("name", schoolName.trim()).limit(1).maybeSingle();
-      if (!school) throw new Error("École introuvable. Vérifiez le nom de l'établissement.");
+      const { data: rpcResult, error: rpcError } = await supabase.rpc("find_student_for_onboarding", {
+        p_school_name: schoolName.trim(),
+        p_first_name: studentFirstName.trim(),
+        p_last_name: studentLastName.trim(),
+      });
+      if (rpcError) throw new Error("Erreur lors de la recherche : " + rpcError.message);
 
-      const { data: student } = await supabase.from("students").select("id")
-        .ilike("first_name", studentFirstName.trim())
-        .ilike("last_name", studentLastName.trim())
-        .eq("school_id", school.id)
-        .limit(1).maybeSingle();
+      const match = rpcResult?.[0];
+      if (!match) throw new Error("Élève introuvable dans cet établissement. Demande à ton professeur de vérifier que ton nom est bien enregistré.");
 
-      if (!student) throw new Error("Élève introuvable dans cet établissement. Demande à ton professeur de vérifier que ton nom est bien enregistré.");
+      const school = { id: match.school_id };
+      const student = { id: match.student_id };
 
-      await supabase.from("user_profiles").upsert({
+      const { error: profileError } = await supabase.from("user_profiles").upsert({
         id: user.id,
         full_name: fullName || `${studentFirstName} ${studentLastName}`,
         display_role: "student",
         locale: "fr",
         template_json: { student_id: student.id, school_id: school.id },
       });
+      if (profileError) throw new Error("Erreur profil : " + profileError.message);
 
-      await supabase.from("school_memberships").upsert(
+      const { error: memberError } = await supabase.from("school_memberships").upsert(
         { school_id: school.id, user_id: user.id, role: "student" },
         { onConflict: "school_id,user_id" }
       );
+      if (memberError) throw new Error("Erreur inscription : " + memberError.message);
 
       setStep(4);
     } catch (err: unknown) {
