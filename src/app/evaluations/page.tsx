@@ -790,7 +790,7 @@ function CreateTemplateModal({ ctx, onCreated, onClose }: { ctx: TeacherContext;
       let fichierPath: string | null = null; let fichierNom: string | null = null;
       if (pendingFile) {
         const safeName = pendingFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const path = `${ctx.teacherUserId}/template-${Date.now()}/${safeName}`;
+        const path = `${ctx.teacherId}/template-${Date.now()}/${safeName}`;
         const { error: upErr } = await ctx.supabase.storage.from("evaluations").upload(path, pendingFile, { upsert: true, contentType: pendingFile.type });
         if (upErr) throw new Error(`Upload : ${upErr.message}`);
         fichierPath = path; fichierNom = pendingFile.name;
