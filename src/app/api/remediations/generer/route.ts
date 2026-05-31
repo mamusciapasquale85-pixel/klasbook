@@ -3,14 +3,10 @@
 // Génère les exercices ET sauvegarde dans Supabase (remediations.exercice_propose + corrige_genere)
 
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { callAI } from "@/lib/ai";
 import { createClient } from "@supabase/supabase-js";
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
 
 // Service role pour écrire dans remediations sans RLS
 const supabase = createClient(
@@ -249,17 +245,7 @@ export async function POST(req: NextRequest) {
     const competence = normalizeCompetence(rawCompetence ?? "");
     const prompt = buildPrompt(competence, niveau ?? "1re secondaire", theme ?? "Remédiation ciblée", eleveNom ?? eleve_nom ?? "élève");
 
-    // ── Appel Anthropic ──
-    const message = await anthropic.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: 6000,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const texte = message.content
-      .filter((b) => b.type === "text")
-      .map((b) => (b as { type: "text"; text: string }).text)
-      .join("\n");
+    const texte = await callAI("", [{ role: "user", content: prompt }], 6000);
 
     // ── Sauvegarde dans Supabase ──
     const { error: dbError } = await supabase

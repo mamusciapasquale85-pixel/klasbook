@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { callAI } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -19,9 +20,6 @@ export async function POST(request: NextRequest) {
     const { question, matiere = "autre" } = await request.json() as { question: string; matiere: string };
     if (!question?.trim()) return NextResponse.json({ error: "Question requise" }, { status: 400 });
 
-    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-    if (!apiKey) return NextResponse.json({ error: "ANTHROPIC_API_KEY manquante" }, { status: 500 });
-
     const matiereLabel = MATIERES[matiere] ?? MATIERES.autre;
 
     const systemPrompt = `Tu es un tuteur pédagogique expert en ${matiereLabel}, travaillant avec des élèves du secondaire en Fédération Wallonie-Bruxelles (FWB).
@@ -33,28 +31,7 @@ Règles :
 - Commence directement par l'explication, sans formule de politesse
 - Termine par une courte encouragement ou question de vérification si pertinent`;
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 400,
-        system: systemPrompt,
-        messages: [{ role: "user", content: question.trim() }],
-      }),
-    });
-
-    if (!res.ok) {
-      const msg = await res.text();
-      return NextResponse.json({ error: `Erreur Claude : ${res.status} — ${msg}` }, { status: 500 });
-    }
-
-    const payload = await res.json() as { content?: Array<{ type: string; text?: string }> };
-    const explication = payload.content?.find(c => c.type === "text")?.text?.trim() ?? "";
+    const explication = await callAI(systemPrompt, [{ role: "user", content: question.trim() }], 400);
 
     return NextResponse.json({ explication });
   } catch (e) {

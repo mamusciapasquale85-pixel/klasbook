@@ -3,11 +3,10 @@
 // POST — reçoit les réponses, les note avec Claude, notifie le prof par email
 
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { callAI } from "@/lib/ai";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 const resend = new Resend(process.env.RESEND_API_KEY!);
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -243,16 +242,7 @@ ${reponsesTexte}
   let pointsAmeliorer = "";
 
   try {
-    const msg = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 600,
-      messages: [{ role: "user", content: gradingPrompt }],
-    });
-
-    const raw = msg.content
-      .filter((b) => b.type === "text")
-      .map((b) => (b as { type: "text"; text: string }).text)
-      .join("");
+    const raw = await callAI("", [{ role: "user", content: gradingPrompt }], 600);
 
     const parsed = JSON.parse(raw) as {
       score: number;

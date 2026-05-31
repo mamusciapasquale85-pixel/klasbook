@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { callAI } from "@/lib/ai";
 import { CONTEXTE_SYSTEME_FWB } from "@/lib/referentiels-fwb";
 
 export const runtime = "nodejs";
@@ -43,11 +44,6 @@ export async function POST(req: Request) {
     }
     if (!body.reponse_eleve?.trim()) {
       return NextResponse.json({ error: "Réponse de l'élève manquante" }, { status: 400 });
-    }
-
-    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-    if (!apiKey) {
-      return NextResponse.json({ error: "ANTHROPIC_API_KEY manquante" }, { status: 500 });
     }
 
     const prenom = body.prenom?.trim() || "l'élève";
@@ -97,29 +93,7 @@ RÈGLES : Toujours bienveillant, corrections précises, conformité FWB niveau $
 
 ${CONTEXTE_SYSTEME_FWB}`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 2000,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-
-    const payload = (await response.json().catch(() => ({}))) as unknown;
-
-    if (!response.ok) {
-      const apiError = (payload as { error?: { message?: string } })?.error?.message || toNiceError(payload);
-      return NextResponse.json({ error: `Erreur Anthropic: ${apiError}` }, { status: response.status });
-    }
-
-    const correction = extractText(payload);
-    if (!correction) return NextResponse.json({ error: "Réponse vide" }, { status: 502 });
+    const correction = await callAI("", [{ role: "user", content: prompt }], 2000);
 
     return NextResponse.json({ correction });
   } catch (error: unknown) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getReferentiel, CONTEXTE_SYSTEME_FWB } from "@/lib/referentiels-fwb";
 import { checkAndIncrementExerciceUsage } from "@/lib/billing";
+import { callAI } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -857,44 +858,14 @@ export async function POST(req: Request) {
       }
     } catch { /* non-bloquant */ }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-    if (!apiKey) {
-      return NextResponse.json({ error: "ANTHROPIC_API_KEY manquante dans .env.local" }, { status: 500 });
-    }
-
     const prompt = buildPrompt({ subject, typeExercice, niveau, theme, langue, attendu, contexteRemediation, memoire, resultatsEleve, contexteHebdo });
 
-    const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 4000,
-        system: `Tu es un expert en création de matériel pédagogique pour l'enseignement secondaire en Belgique francophone.
+    const systemPrompt = `Tu es un expert en création de matériel pédagogique pour l'enseignement secondaire en Belgique francophone.
 Tu produis des exercices structurés, complets et immédiatement utilisables, pour toutes les matières.
 Tes productions sont TOUJOURS conformes aux référentiels officiels du Tronc Commun de la Fédération Wallonie-Bruxelles (FWB).
-${CONTEXTE_SYSTEME_FWB}`,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
+${CONTEXTE_SYSTEME_FWB}`;
 
-    const anthropicPayload = (await anthropicResponse.json().catch(() => ({}))) as unknown;
-
-    if (!anthropicResponse.ok) {
-      const apiError =
-        (anthropicPayload as { error?: { message?: string } })?.error?.message ||
-        toNiceError(anthropicPayload);
-      return NextResponse.json({ error: `Erreur Anthropic: ${apiError}` }, { status: anthropicResponse.status });
-    }
-
-    const exercice = extractAnthropicText(anthropicPayload);
-    if (!exercice) {
-      return NextResponse.json({ error: "Réponse vide. Réessaie." }, { status: 502 });
-    }
+    const exercice = await callAI(systemPrompt, [{ role: "user", content: prompt }], 4000);
 
     const typeLabel = EXERCISE_LABELS[typeExercice] ?? "Exercice";
     const titre = `${typeLabel} – ${theme} (${niveau})`;

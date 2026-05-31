@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { callAI } from "@/lib/ai";
 import {
   CADRE_GENERAL,
   REF_LANGUES_MODERNES,
@@ -206,41 +207,19 @@ export async function POST(req: Request) {
     const messages = body.messages ?? [];
     if (!messages.length) return NextResponse.json({ error: "Messages manquants" }, { status: 400 });
 
-    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-    if (!apiKey) return NextResponse.json({ error: "ANTHROPIC_API_KEY manquante" }, { status: 500 });
-
     // Détection de la matière pour enrichir le contexte si besoin
     const detectedSubject = detectSubjectFromMessages(messages);
     const subjectHint = detectedSubject !== "general"
       ? `\n[Contexte détecté : question liée à la matière "${detectedSubject}" — utilise les attendus FWB correspondants.]`
       : "";
 
-    // Enrichissement du dernier message utilisateur avec le contexte matière
     const enrichedMessages = messages.map((m, i) =>
       i === messages.length - 1 && m.role === "user" && subjectHint
         ? { ...m, content: m.content + subjectHint }
         : m
     );
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 4096,
-        system: SYSTEM_PROMPT,
-        messages: enrichedMessages.map((m) => ({ role: m.role, content: m.content })),
-      }),
-    });
-
-    const payload = (await response.json().catch(() => ({}))) as unknown;
-    if (!response.ok) {
-      const apiError = (payload as { error?: { message?: string } })?.error?.message || toNiceError(payload);
-      return NextResponse.json({ error: `Erreur API: ${apiError}` }, { status: response.status });
-    }
-
-    const text = extractText(payload);
-    if (!text) return NextResponse.json({ error: "Réponse vide" }, { status: 502 });
+    const text = await callAI(SYSTEM_PROMPT, enrichedMessages, 4096);
     return NextResponse.json({ message: text });
   } catch (error: unknown) {
     return NextResponse.json({ error: toNiceError(error) }, { status: 500 });

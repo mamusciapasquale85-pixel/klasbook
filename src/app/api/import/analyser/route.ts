@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { callAI } from "@/lib/ai";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -31,9 +32,6 @@ export async function POST(req: Request) {
     const body = await req.json() as { contenu: string; nom_fichier?: string };
     const { contenu, nom_fichier } = body;
     if (!contenu?.trim()) return NextResponse.json({ error: "Contenu manquant" }, { status: 400 });
-
-    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-    if (!apiKey) return NextResponse.json({ error: "ANTHROPIC_API_KEY manquante" }, { status: 500 });
 
     const prompt = `Tu es un assistant d'import de résultats scolaires pour Klasbook (FWB - Belgique francophone).
 Un professeur de "${matiere}" t'envoie un extrait de ses résultats (copié depuis Excel, Google Sheets, CSV ou Pronote).
@@ -69,16 +67,7 @@ Réponds UNIQUEMENT en JSON valide (pas de markdown, pas de backticks) :
 }
 Si impossible : {"ok": false, "erreur": "explication"}`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 4000, messages: [{ role: "user", content: prompt }] }),
-    });
-
-    const payload = await response.json() as { content?: { type: string; text: string }[]; error?: { message: string } };
-    if (!response.ok) throw new Error(payload.error?.message ?? "Erreur API");
-
-    const text = payload.content?.find(c => c.type === "text")?.text ?? "";
+    const text = await callAI("", [{ role: "user", content: prompt }], 4000);
     const clean = text.replace(/```json|```/g, "").trim();
 
     let parsed;

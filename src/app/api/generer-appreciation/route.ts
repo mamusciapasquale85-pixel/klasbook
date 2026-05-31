@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { callAI } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -15,11 +16,6 @@ export async function POST(req: Request) {
 
     if (!student_name) {
       return NextResponse.json({ error: "student_name requis" }, { status: 400 });
-    }
-
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "Clé API manquante" }, { status: 500 });
     }
 
     const prompt = `Tu es un enseignant bienveillant en Fédération Wallonie-Bruxelles.
@@ -40,27 +36,7 @@ Règles :
 
 Réponds uniquement avec le texte de l'appréciation, rien d'autre.`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 200,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`API Anthropic error: ${err}`);
-    }
-
-    const data = await response.json();
-    const appreciation = data.content?.[0]?.text?.trim() ?? "";
+    const appreciation = await callAI("", [{ role: "user", content: prompt }], 200);
 
     return NextResponse.json({ appreciation });
   } catch (e: any) {
