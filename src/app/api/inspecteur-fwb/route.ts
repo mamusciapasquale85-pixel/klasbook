@@ -35,15 +35,25 @@ function detectSubjectFromMessages(messages: Message[]): string {
 
 // ─── Prompt système multi-matières ────────────────────────────────────────
 
-const SYSTEM_PROMPT = `Tu es l'Inspecteur FWB, expert pédagogique de tous les référentiels du Tronc Commun de la Fédération Wallonie-Bruxelles. Tu assistes Pasquale, prof de néerlandais et développeur de Klasbook, au LAB Marie Curie (Bruxelles), 1re et 2e secondaire.
+function buildSystemPrompt(subject: string): string {
+  const refMap: Record<string, string> = {
+    langues: REF_LANGUES_MODERNES,
+    francais: REF_FRANCAIS,
+    maths: REF_MATHEMATIQUES,
+    sciences: REF_SCIENCES,
+    histoire: REF_HISTOIRE,
+    geographie: REF_GEOGRAPHIE,
+  };
+  const ref = refMap[subject] ?? "";
+
+  return `Tu es l'Inspecteur FWB, expert pédagogique du Tronc Commun de la Fédération Wallonie-Bruxelles. Tu assistes des professeurs du secondaire (1re et 2e) en Belgique francophone.
 
 Tu maîtrises les référentiels officiels IFPC pour TOUTES les matières :
 - Langues Modernes (NL, EN) — niveaux CECRL (A2.2, B1.1)
 - Français — 4 visées (PARLER, ÉCOUTER, LIRE, ÉCRIRE)
 - Mathématiques — 4 champs (Géométrie, Grandeurs, Nombres/Algèbre, Statistiques)
-- Sciences — 3 disciplines (Biologie, Chimie, Physique) — 4 visées
-- Histoire (FHGES) — démarche critique, sources, fait religieux/mondialisation
-- Géographie (FHGES) — analyse spatiale, mutations des espaces, mondialisation
+- Sciences — 3 disciplines (Biologie, Chimie, Physique)
+- Histoire et Géographie (FHGES)
 
 ---
 
@@ -132,35 +142,9 @@ FORMAT :
 ## CONTEXTE GÉNÉRAL FWB
 ${CONTEXTE_SYSTEME_FWB}
 
-${CADRE_GENERAL}
-
 ---
 
-## RÉFÉRENTIELS OFFICIELS PAR MATIÈRE
-
-${REF_LANGUES_MODERNES}
-
----
-
-${REF_FRANCAIS}
-
----
-
-${REF_MATHEMATIQUES}
-
----
-
-${REF_SCIENCES}
-
----
-
-${REF_HISTOIRE}
-
----
-
-${REF_GEOGRAPHIE}
-
----
+${ref ? `## RÉFÉRENTIEL OFFICIEL\n\n${ref}\n\n---` : ""}
 
 ## RÈGLES ABSOLUES
 - Répondre en français (sauf si on demande du contenu dans une autre langue)
@@ -168,9 +152,8 @@ ${REF_GEOGRAPHIE}
 - Pour chaque analyse de copie : distinguer clairement erreurs tolérées vs non tolérées selon le niveau exact
 - Pour chaque grille : critères officiels FWB uniquement, pas de critères inventés
 - Pour planification : vérifier que tous les attendus du référentiel sont couverts sur l'année
-- Pour Langues Modernes 1S : vérifier que les 12 champs thématiques sont couverts ; pour 2S : 11 champs (sauf Météo/climat)
-- Être opérationnel : fournir du matériel directement utilisable en classe
-- En cas de doute sur un attendu précis, le préciser explicitement et rester dans les limites du référentiel officiel`;
+- Être opérationnel : fournir du matériel directement utilisable en classe`;
+}
 
 // ─── Utilitaires ───────────────────────────────────────────────────────────
 
@@ -219,7 +202,7 @@ export async function POST(req: Request) {
         : m
     );
 
-    const text = await callAI(SYSTEM_PROMPT, enrichedMessages, 4096);
+    const text = await callAI(buildSystemPrompt(detectedSubject), enrichedMessages, 4096);
     return NextResponse.json({ message: text });
   } catch (error: unknown) {
     return NextResponse.json({ error: toNiceError(error) }, { status: 500 });
