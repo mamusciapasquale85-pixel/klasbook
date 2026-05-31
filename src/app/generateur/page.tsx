@@ -1,5 +1,22 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
+import { gsap } from "gsap";
+
+function AnimatedMessage({ children, role }: { children: React.ReactNode; role: "user" | "assistant" }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    gsap.fromTo(ref.current,
+      { opacity: 0, y: 18, scale: 0.97 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: "power2.out" }
+    );
+  }, []);
+  return (
+    <div ref={ref} style={{ display: "flex", justifyContent: role === "user" ? "flex-end" : "flex-start" }}>
+      {children}
+    </div>
+  );
+}
 
 type Message = { role: "user" | "assistant"; content: string; id: string };
 
@@ -340,7 +357,7 @@ export default function GenerateurPage() {
           </div>
         )}
         {messages.map((msg) => (
-          <div key={msg.id} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
+          <AnimatedMessage key={msg.id} role={msg.role}>
             <div style={{
               maxWidth: "88%",
               borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
@@ -355,7 +372,7 @@ export default function GenerateurPage() {
                 : <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, fontSize: 14 }}>{msg.content}</div>
               }
             </div>
-          </div>
+          </AnimatedMessage>
         ))}
         {loading && (
           <div style={{ display: "flex", justifyContent: "flex-start" }}>
