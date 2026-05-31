@@ -2,6 +2,36 @@
 import React, { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { gsap } from "gsap";
+
+function MobileSheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!sheetRef.current || !overlayRef.current) return;
+    gsap.fromTo(overlayRef.current, { opacity: 0 }, { opacity: 1, duration: 0.2 });
+    gsap.fromTo(sheetRef.current, { y: "100%" }, { y: 0, duration: 0.3, ease: "power3.out" });
+  }, []);
+  function handleClose() {
+    if (!sheetRef.current || !overlayRef.current) { onClose(); return; }
+    gsap.to(overlayRef.current, { opacity: 0, duration: 0.2 });
+    gsap.to(sheetRef.current, { y: "100%", duration: 0.25, ease: "power2.in", onComplete: onClose });
+  }
+  return (
+    <>
+      <div ref={overlayRef} onClick={handleClose}
+        style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(15,23,42,0.4)" }} />
+      <div ref={sheetRef} style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 301,
+        background: "#fff", borderRadius: "20px 20px 0 0",
+        paddingBottom: "env(safe-area-inset-bottom, 16px)",
+        boxShadow: "0 -8px 40px rgba(15,23,42,0.18)",
+      }}>
+        {children}
+      </div>
+    </>
+  );
+}
 
 type NavItem = { label: string; icon: string; href: string };
 
@@ -267,21 +297,7 @@ export default function ProfShell({ children }: { children: React.ReactNode }) {
 
           {/* ── DRAWER "PLUS" (bottom sheet) ── */}
           {mobileSheetOpen && (
-            <>
-              {/* Overlay */}
-              <div
-                onClick={() => setMobileSheetOpen(false)}
-                style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(15,23,42,0.4)" }}
-              />
-              {/* Sheet */}
-              <div style={{
-                position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 301,
-                background: "#fff",
-                borderRadius: "20px 20px 0 0",
-                paddingBottom: "env(safe-area-inset-bottom, 16px)",
-                boxShadow: "0 -8px 40px rgba(15,23,42,0.18)",
-                animation: "slideUp 0.25s ease-out",
-              }}>
+            <MobileSheet onClose={() => setMobileSheetOpen(false)}>
                 {/* Handle */}
                 <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 4px" }}>
                   <div style={{ width: 36, height: 4, borderRadius: 2, background: "#e2e8f0" }} />
@@ -320,9 +336,7 @@ export default function ProfShell({ children }: { children: React.ReactNode }) {
                     background: "#fff5f5",
                   }}>🚪 Se déconnecter</a>
                 </div>
-              </div>
-              <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
-            </>
+            </MobileSheet>
           )}
         </>
       )}

@@ -18,6 +18,26 @@ function AnimatedMessage({ children, role }: { children: React.ReactNode; role: 
   );
 }
 
+function AnimatedLoadingBar({ color }: { color: string }) {
+  const barRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!barRef.current) return;
+    const tl = gsap.timeline({ repeat: -1 });
+    tl.fromTo(barRef.current,
+      { scaleX: 0, transformOrigin: "left center" },
+      { scaleX: 1, duration: 1.1, ease: "power1.inOut" }
+    ).to(barRef.current,
+      { scaleX: 0, transformOrigin: "right center", duration: 0.7, ease: "power2.in" }
+    );
+    return () => { tl.kill(); };
+  }, []);
+  return (
+    <div style={{ width: "100%", height: 3, background: "#e2e8f0", borderRadius: 2, overflow: "hidden", marginBottom: 10 }}>
+      <div ref={barRef} style={{ height: "100%", background: color, borderRadius: 2 }} />
+    </div>
+  );
+}
+
 type Message = { role: "user" | "assistant"; content: string; id: string };
 
 const GRADIENT = "linear-gradient(135deg, #FF3B30 0%, #0A84FF 100%)";
@@ -306,7 +326,10 @@ export default function GenerateurPage() {
       {/* SKILLS — 3 colonnes × 2 rangées */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, marginBottom: 10 }}>
         {skills.map(skill => (
-          <button key={skill.id} onClick={() => setActiveSkill(skill.id)} style={{
+          <button key={skill.id} onClick={(e) => {
+            gsap.fromTo(e.currentTarget, { scale: 0.88 }, { scale: 1, duration: 0.3, ease: "back.out(3)" });
+            setActiveSkill(skill.id);
+          }} style={{
             padding: "8px 4px", borderRadius: 12,
             border: activeSkill === skill.id ? `2px solid ${skill.color}` : "1.5px solid #e2e8f0",
             background: activeSkill === skill.id ? `${skill.color}18` : "#fff",
@@ -375,16 +398,12 @@ export default function GenerateurPage() {
           </AnimatedMessage>
         ))}
         {loading && (
-          <div style={{ display: "flex", justifyContent: "flex-start" }}>
-            <div style={{ background: "#fff", border: "1px solid rgba(15,23,42,0.08)", borderRadius: "18px 18px 18px 4px", padding: "12px 16px", boxShadow: "0 2px 8px rgba(15,23,42,0.07)" }}>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                {[0, 1, 2].map(i => (
-                  <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "#94a3b8", animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
-                ))}
-                <span style={{ fontSize: 12, color: "#64748b", marginLeft: 6 }}>
-                  Génération en cours pour {matiere}…
-                </span>
-              </div>
+          <div style={{ display: "flex", justifyContent: "flex-start", width: "100%" }}>
+            <div style={{ background: "#fff", border: "1px solid rgba(15,23,42,0.08)", borderRadius: "18px 18px 18px 4px", padding: "14px 16px", boxShadow: "0 2px 8px rgba(15,23,42,0.07)", width: "100%", maxWidth: 340 }}>
+              <AnimatedLoadingBar color={currentSkill.color} />
+              <span style={{ fontSize: 12, color: "#64748b" }}>
+                {currentSkill.emoji} Génération en cours…
+              </span>
             </div>
           </div>
         )}
