@@ -12,50 +12,46 @@ type Status = "idle" | "loading" | "playing" | "error";
 
 export default function VocalPlayer({ text, langue = "nl", label = "Écouter le modèle" }: Props) {
   const [status, setStatus] = useState<Status>("idle");
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const uttRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const play = useCallback(async () => {
+  const VOICE_LANG: Record<string, string> = {
+    nl: "nl-BE", en: "en-GB", fr: "fr-FR",
+  };
+
+  const play = useCallback(() => {
     if (status === "loading") return;
 
-    // Si déjà chargé et en lecture, on arrête
-    if (status === "playing" && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+    if (status === "playing") {
+      window.speechSynthesis.cancel();
       setStatus("idle");
       return;
     }
 
-    setStatus("loading");
-    try {
-      const res = await fetch("/api/vocal-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "tts", text, langue }),
-      });
-
-      if (!res.ok) throw new Error(`TTS error ${res.status}`);
-
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-
-      if (audioRef.current) {
-        audioRef.current.pause();
-        URL.revokeObjectURL(audioRef.current.src);
-      }
-
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      audio.onended = () => setStatus("idle");
-      audio.onerror = () => setStatus("error");
-
-      await audio.play();
-      setStatus("playing");
-    } catch (e) {
-      console.error(e);
+    if (!window.speechSynthesis) {
       setStatus("error");
       setTimeout(() => setStatus("idle"), 2000);
+      return;
     }
+
+    setStatus("loading");
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = VOICE_LANG[langue] ?? "nl-BE";
+    utter.rate = 0.85;
+
+    // Cherche une voix native pour la langue
+    const voices = window.speechSynthesis.getVoices();
+    const match = voices.find(v => v.lang.startsWith(utter.lang)) ?? voices.find(v => v.lang.startsWith(langue));
+    if (match) utter.voice = match;
+
+    utter.onstart = () => setStatus("playing");
+    utter.onend = () => setStatus("idle");
+    utter.onerror = () => { setStatus("error"); setTimeout(() => setStatus("idle"), 2000); };
+
+    uttRef.current = utter;
+    window.speechSynthesis.speak(utter);
+    // Fallback si onstart ne se déclenche pas
+    setTimeout(() => setStatus(s => s === "loading" ? "playing" : s), 300);
   }, [text, langue, status]);
 
   const icon = status === "loading"
